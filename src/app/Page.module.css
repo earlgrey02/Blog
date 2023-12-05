@@ -1,0 +1,16 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  z-index: 0;
+}
+
+.square {
+  position: absolute;
+  right: 55%;
+  top: -20rem;
+  width: 58rem;
+  height: 58rem;
+  background-color:rgb(35, 35, 35);
+  z-index: -1;
+}

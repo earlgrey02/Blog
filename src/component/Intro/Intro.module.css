@@ -1,0 +1,28 @@
+.container {
+  height: 34rem;
+  display: flex;
+  align-items: center;
+}
+
+.intro {
+  margin-left: 12%;
+}
+
+.title {
+  font-size: 3.5rem;
+  color: white;
+  font-weight: 800;
+}
+
+.description {
+  color: rgb(210, 210, 210);
+  margin-top: 0.8rem;
+  font-size: 1.1rem;
+}
+
+.tags {
+  color: rgb(180, 180, 180);
+  font-weight: lighter;
+  letter-spacing: -0.5px;
+  margin-top: 0.3rem;
+}
