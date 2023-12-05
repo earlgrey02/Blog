@@ -20,7 +20,7 @@ const Intro = () => {
         variants={variants}
       >
         <MotionedDiv className={styles.title} variants={variants}>
-          earlgrey02's blog
+          earlgrey02&apos;s blog
         </MotionedDiv>
         <MotionedDiv className={styles.description} variants={variants}>
           Backend를 공부하는 개발 블로그입니다.
