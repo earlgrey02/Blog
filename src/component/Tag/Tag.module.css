@@ -1,0 +1,12 @@
+.tag {
+  margin-right: 0.4rem;
+  background-color: rgb(80, 80, 80);
+  color: rgb(180, 180, 180);
+  padding: 0.4rem;
+  border-radius: 0.2rem;
+  transition: 0.5s;
+}
+
+.tag:hover {
+  background-color: rgb(100, 100, 100);
+}
