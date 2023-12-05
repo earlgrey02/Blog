@@ -1,0 +1,88 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.intro {
+  height: 30rem;
+  width: 100%;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.title {
+  font-size: 2.2rem;
+  color: white;
+  font-weight: 800;
+}
+
+.description {
+  color: rgb(220, 220, 220);
+  margin-top: 0.8rem;
+  font-size: 1.2rem;
+  font-weight: lighter;
+}
+
+.date {
+  color: rgb(160, 160, 160);
+  margin-top: 0.8rem;
+  font-weight: lighter;
+}
+
+.intro > hr {
+  position: absolute;
+  height: 0.1rem;
+  width: 60%;
+  bottom: 4rem;
+  border: 0;
+  background-color: rgb(60, 60, 60);
+}
+
+.content {
+  width: 60%;
+  line-height: 2;
+  font-size: 1.1rem;
+  padding: 3rem 0;
+  color: white;
+  font-weight: lighter;
+}
+
+.content > pre {
+  background-color: rgb(35, 35, 35);
+  padding: 1.5rem;
+  margin: 1.5rem 0;
+  border-radius: 1rem;
+}
+
+.content > pre > code {
+  overflow-x: scroll;
+  font-family: 'Fira Code';
+  color: white;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  display: flex;
+  text-wrap: wrap;
+}
+
+.content > p > code {
+  background-color: rgb(35, 35, 35);
+  padding: 0.4rem;
+  border-radius: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.content > hr {
+  margin: 2rem 0;
+  height: 0.1rem;
+  background-color: rgb(210, 210, 210);
+  border: 0;
+}
+
+.content > h2 {
+  font-size: 1.8rem;
+  margin: 3rem 0 0.5rem;
+}
