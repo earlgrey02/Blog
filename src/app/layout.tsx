@@ -1,9 +1,14 @@
+import './global.css'
 import { ReactNode } from 'react'
+import Head from './head'
 
 const Layout = ({ children }: { children: ReactNode }) => {
   return (
     <html>
-      <body>{children}</body>
+      <Head />
+      <body>
+        {children}
+      </body>
     </html>
   )
 }
