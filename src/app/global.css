@@ -1,0 +1,16 @@
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'NanumSquareAc';
+  background-color: rgb(40, 40, 40);
+  color: white;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
