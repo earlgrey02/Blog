@@ -1,0 +1,39 @@
+.container {
+  margin: 3rem 0;
+}
+
+.information {
+  display: flex;
+  flex-direction: column;
+}
+
+.title {
+  font-weight: 800;
+  font-size: 1.6rem;
+  transition: 0.5s;
+}
+
+.description {
+  color: rgb(160, 160, 160);
+  margin-top: 0.6rem;
+}
+
+.tags {
+  margin-top: 0.6rem;
+  display: flex;
+  font-size: 0.9rem;
+}
+
+.date {
+  color: rgb(160, 160, 160);
+  margin-top: 1.5rem;
+  font-weight: lighter;
+}
+
+.container:hover {
+  cursor: pointer;
+}
+
+.container:hover .title {
+  color: rgb(200, 200, 200);
+}
