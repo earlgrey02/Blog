@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react'
 
 const Header = () => {
   const [scroll, setScroll] = useState(0)
+  const [title, setTitle] = useState('')
   const path = usePathname()
 
   useEffect(() => {
@@ -14,10 +15,16 @@ const Header = () => {
     )
   }, [])
 
+  useEffect(() => {
+    if (path.startsWith('/post')) {
+      setTitle(document.querySelector('title')?.textContent as string)
+    }
+  }, [path])
+
   return (
     <div
       className={styles.container}
-      style={scroll > 400 ? { backgroundColor: 'rgb(50, 50, 50)' } : {}}
+      style={scroll > 300 ? { backgroundColor: 'rgb(50, 50, 50)' } : {}}
     >
       <div className={styles.link}>
         <Link href="/">Home</Link>
@@ -30,9 +37,9 @@ const Header = () => {
       {path.startsWith('/post') ? (
         <div
           className={styles.title}
-          style={scroll > 400 ? { opacity: 1 } : {}}
+          style={scroll > 300 ? { opacity: 1 } : {}}
         >
-          {document.querySelector('title')?.textContent}
+          {title}
         </div>
       ) : null}
     </div>
