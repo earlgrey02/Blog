@@ -1,9 +1,10 @@
 .tag {
-  margin-right: 0.4rem;
+  margin-right: calc(0.2vw + 0.2rem);
+  padding: calc(0.2vw + 0.2rem);
+  border-radius: 0.2rem;
+  font-size: calc(0.2vw + 0.6rem);
   background-color: rgb(80, 80, 80);
   color: rgb(180, 180, 180);
-  padding: 0.4rem;
-  border-radius: 0.2rem;
   transition: 0.5s;
 }
 

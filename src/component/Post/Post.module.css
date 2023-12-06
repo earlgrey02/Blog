@@ -1,5 +1,5 @@
 .container {
-  margin: 3rem 0;
+  margin: 4vh 0;
 }
 
 .information {
@@ -9,25 +9,26 @@
 
 .title {
   font-weight: 800;
-  font-size: 1.6rem;
+  font-size: calc(0.4vw + 1.2rem);
   transition: 0.5s;
 }
 
 .description {
-  color: rgb(160, 160, 160);
   margin-top: 0.6rem;
+  font-size: calc(0.2vw + 0.8rem);
+  color: rgb(160, 160, 160);
 }
 
 .tags {
-  margin-top: 0.6rem;
   display: flex;
-  font-size: 0.9rem;
+  margin-top: 0.6rem;
 }
 
 .date {
-  color: rgb(160, 160, 160);
   margin-top: 1.5rem;
   font-weight: lighter;
+  font-size: calc(0.3vw + 0.6rem);
+  color: rgb(160, 160, 160);
 }
 
 .container:hover {

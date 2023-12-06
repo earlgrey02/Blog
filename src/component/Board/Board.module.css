@@ -1,10 +1,17 @@
 .container {
   display: flex;
   flex-direction: row-reverse;
-  padding: 0 5%;
+  min-height: 35vh;
+  padding: 0 9vw;
 }
 
 .posts {
   display: flex;
   flex-direction: column;
+}
+
+@media (max-width: 540px) {
+  .posts {
+    align-items: center;
+  }
 }
