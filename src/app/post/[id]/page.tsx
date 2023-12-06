@@ -1,5 +1,5 @@
 import styles from './Page.module.css'
-import { getPostById } from '@/modules/post/api'
+import { getPostById, getPosts } from '@/modules/post/api'
 
 const Page = async ({ params }: { params: { id: number } }) => {
   const post = await getPostById(params.id)
@@ -21,4 +21,13 @@ const Page = async ({ params }: { params: { id: number } }) => {
   )
 }
 
+const generateStaticParams = async () => {
+  const posts = await getPosts()
+
+  return posts.map(({ id }) => ({
+    id: id.toString()
+  }))
+}
+
 export default Page
+export { generateStaticParams }
