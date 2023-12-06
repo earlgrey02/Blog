@@ -3,9 +3,10 @@ import { join } from 'path'
 import matter from 'gray-matter'
 import { remark } from 'remark'
 import html from 'remark-html'
+import { notFound } from 'next/navigation'
 
-const path = join(process.cwd(), '/public/posts')
-const files = fs.readdirSync(path)
+const directoryPath = join(process.cwd(), '/public/posts')
+const files = fs.readdirSync(directoryPath)
 
 const getPosts = async () =>
   await Promise.all(
@@ -20,7 +21,15 @@ const getPostsSortedByDate = async () =>
   )
 
 const getPostById = async (id: number) => {
-  const file = fs.readFileSync(join(path, `${id}.md`), 'utf8')
+  const filePath = join(directoryPath, `${id}.md`)
+
+  try {
+    fs.readFileSync(filePath, 'utf8')
+  } catch {
+    notFound()
+  }
+
+  const file = fs.readFileSync(filePath, 'utf8')
   const { data, content } = matter(file)
   const post: Post = {
     id: id,
@@ -34,4 +43,4 @@ const getPostById = async (id: number) => {
   return post
 }
 
-export { getPosts, getPostsSortedByDate, getPostById }
+export { getPostsSortedByDate, getPostById }
