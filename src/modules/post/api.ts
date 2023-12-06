@@ -43,4 +43,4 @@ const getPostById = async (id: number) => {
   return post
 }
 
-export { getPostsSortedByDate, getPostById }
+export { getPosts, getPostsSortedByDate, getPostById }
