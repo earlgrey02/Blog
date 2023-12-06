@@ -2,8 +2,8 @@ import styles from './Intro.module.css'
 import MotionedDiv from '@/lib/motion'
 
 const variants = {
-  exit: { opacity: 0, filter: 'blur(0.8px) brightness(80%)' },
-  enter: {
+  initial: { opacity: 0, filter: 'blur(0.8px) brightness(80%)' },
+  animate: {
     opacity: 1,
     filter: 'blur(0px) brightness(100%)',
     transition: { duration: 2.5, staggerChildren: 0.6 }
@@ -15,8 +15,8 @@ const Intro = () => {
     <div className={styles.container}>
       <MotionedDiv
         className={styles.intro}
-        initial="exit"
-        animate="enter"
+        initial="initial"
+        animate="animate"
         variants={variants}
       >
         <MotionedDiv className={styles.title} variants={variants}>

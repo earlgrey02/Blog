@@ -4,19 +4,33 @@
   align-items: center;
   justify-content: center;
   width: 100%;
-  height: calc(0.6vw + 5rem);
+  height: calc(1vw + 8rem);
   margin-top: calc(1vw + 5rem);
   font-weight: lighter;
   background-color: rgb(50, 50, 50);
+  font-size: calc(0.2vw + 0.65rem);
 }
 
 .copyright {
-  font-size: calc(0.2vw + 0.65rem);
+  margin-bottom: calc(0.3vw + 0.2rem);
+}
+
+.powered {
+  display: flex;
+  align-items: center;
+}
+
+.image {
+  position: relative;
+  margin-left: calc(0.3vw + 0.2rem);
+  width: calc(0.5vw + 3rem);
+  height: calc(0.5vw + 1.6rem);
+  filter: invert(1);
 }
 
 .link {
   margin-top: calc(0.2vw + 0.3rem);
-  font-size: calc(0.2vw + 0.55rem);
+  font-size: calc(0.2vw + 0.6rem);
   text-decoration: underline;
   transition: 0.3s;
 }

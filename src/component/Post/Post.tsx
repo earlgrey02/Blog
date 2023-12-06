@@ -1,11 +1,13 @@
+import MotionedDiv from '@/lib/motion'
 import Tag from '../Tag/Tag'
 import styles from './Post.module.css'
 import Link from 'next/link'
+import { variants } from '../Board/Board'
 
 const Post = ({ post }: { post: Post }) => {
   return (
     <Link href={`/post/${post.id}`} className={styles.container}>
-      <div className={styles.information}>
+      <MotionedDiv className={styles.information} variants={variants}>
         <div className={styles.title}>{post.title}</div>
         <div className={styles.description}>{post.description}</div>
         <div className={styles.tags}>
@@ -14,7 +16,8 @@ const Post = ({ post }: { post: Post }) => {
           ))}
         </div>
         <div className={styles.date}>{post.date}</div>
-      </div>
+        <div className={styles.line} />
+      </MotionedDiv>
     </Link>
   )
 }

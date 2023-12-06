@@ -10,7 +10,7 @@
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  width: 100%;
+  width: 90vw;
   height: 30rem;
   text-align: center;
 }
@@ -63,7 +63,7 @@
 .content > pre > code {
   display: flex;
   font-size: calc(0.2vw + 0.7rem);
-  font-family: 'Fira Code';
+  font-family: 'Fira Code', sans-serif;
   line-height: 1.4;
   color: white;
   overflow-x: scroll;
