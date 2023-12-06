@@ -1,7 +1,9 @@
 .container {
-  height: 34rem;
   display: flex;
   align-items: center;
+  width: 100vw;
+  height: 55vh;
+  min-height: 28rem;
 }
 
 .intro {
@@ -9,20 +11,29 @@
 }
 
 .title {
-  font-size: 3.5rem;
-  color: white;
+  font-size: calc(1.4vw + 2rem);
   font-weight: 800;
+  color: white;
 }
 
 .description {
+  margin-top: calc(0.2vw + 0.5rem);
   color: rgb(210, 210, 210);
-  margin-top: 0.8rem;
-  font-size: 1.1rem;
+  font-size: calc(0.25vw + 0.9rem);
 }
 
 .tags {
-  color: rgb(180, 180, 180);
-  font-weight: lighter;
-  letter-spacing: -0.5px;
   margin-top: 0.3rem;
+  font-size: calc(0.2vw + 0.8rem);
+  font-weight: lighter;
+  letter-spacing: -0.05rem;
+  color: rgb(180, 180, 180);
+}
+
+.square {
+  position: absolute;
+  width: calc(30vw + 20rem);
+  height: calc(30vw + 20rem);
+  z-index: -1;
+  background-color:rgb(35, 35, 35);
 }
