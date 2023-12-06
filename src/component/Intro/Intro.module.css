@@ -3,7 +3,7 @@
   align-items: center;
   width: 100vw;
   height: 55vh;
-  min-height: 28rem;
+  min-height: 30rem;
 }
 
 .intro {
@@ -41,8 +41,6 @@
 @media (max-width: 540px) {
   .container {
     justify-content: center;
-    height: 45vh;
-    min-height: 0;
   }
 
   .intro {

@@ -11,12 +11,12 @@
 }
 
 .copyright {
-  font-size: calc(0.3vw + 0.6rem);
+  font-size: calc(0.2vw + 0.65rem);
 }
 
 .link {
   margin-top: calc(0.2vw + 0.3rem);
-  font-size: calc(0.3vw + 0.5rem);
+  font-size: calc(0.2vw + 0.55rem);
   text-decoration: underline;
   transition: 0.3s;
 }

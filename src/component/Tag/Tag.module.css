@@ -1,8 +1,8 @@
 .tag {
   margin-right: calc(0.2vw + 0.2rem);
-  padding: calc(0.2vw + 0.2rem);
+  padding: calc(0.15vw + 0.3rem);
   border-radius: 0.2rem;
-  font-size: calc(0.2vw + 0.6rem);
+  font-size: calc(0.15vw + 0.7rem);
   background-color: rgb(80, 80, 80);
   color: rgb(180, 180, 180);
   transition: 0.5s;
