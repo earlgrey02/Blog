@@ -1,7 +1,8 @@
 import styles from './Board.module.css'
-import Post from '../Post/Post'
-import { getPostsSortedByDate } from '@/modules/post/api'
 import MotionedDiv from '@/lib/motion'
+import { allPosts } from 'contentlayer/generated'
+import { compareDesc } from 'date-fns'
+import Post from '../Post/Post'
 
 const variants = {
   initial: { opacity: 0, filter: 'blur(0.2px)' },
@@ -13,7 +14,9 @@ const variants = {
 }
 
 const Board = async () => {
-  const posts = await getPostsSortedByDate()
+  const posts = allPosts.sort((post1, post2) =>
+    compareDesc(new Date(post1.date), new Date(post2.date))
+  )
 
   return (
     <div className={styles.container}>
@@ -24,9 +27,7 @@ const Board = async () => {
         animate="animate"
       >
         {posts.map((post) => (
-          <>
-            <Post post={post} key={post.id} />
-          </>
+          <Post post={post} key={post.id} />
         ))}
       </MotionedDiv>
     </div>
