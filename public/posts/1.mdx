@@ -1,8 +1,8 @@
 ---
 title: Spring WebFlux 환경에서의 로깅(Logging)
 description: WebFlux와 같은 멀티 스레드 환경에서는 로그를 어떻게 추적할까?
-date: 2023.11.20
-tags: Spring,Kotlin
+date: 2023-11-20
+tags: [Spring,Kotlin]
 ---
 이번 글은 SW 마에스트로에서 프로젝트를 진행하면서 Spring WebFlux 환경에서 웹 계층 로깅(Logging)을 설정하는 과정을 담은 글이다.
 
@@ -11,7 +11,7 @@ tags: Spring,Kotlin
 
 ## Debug 로깅 설정을 사용해보자
 
-```
+```yaml
 logging:
   level:
     web: debug
@@ -45,7 +45,7 @@ logging:
 
 그 이유는 다음과 같다.
 
-```
+```kotlin showLineNumbers
 public interface ServerRequest {
 	<T> Mono<T> bodyToMono(Class<? extends T> elementClass);
 
@@ -68,7 +68,7 @@ Spring WebFlux에서 요청(`ServerRequest`)에 대해 로깅을 하려면 Reque
 
 당연히 `bodyToMono`가 반환하는 `Mono`도 재생성된 `Mono`이므로 Pointcut에서 Request Body를 다시 가져올 수 있게 된다.
 
-```
+```kotlin showLineNumbers
 public interface ServerRequest {
 	static Builder from(ServerRequest other) {
 		return new DefaultServerRequestBuilder(other);
@@ -80,7 +80,7 @@ public interface ServerRequest {
 
 참고로 우리는 Spring WebFlux의 함수형 엔드포인트를 사용하므로 AOP가 아닌 Router Filter를 활용하기로 했다.
 
-```
+```kotlin showLineNumbers
 fun logFilter(request: ServerRequest, handler: (ServerRequest) -> Mono<ServerResponse>): Mono<ServerResponse> =
     with(request) {
         val logger = getLogger()
@@ -104,7 +104,7 @@ fun logFilter(request: ServerRequest, handler: (ServerRequest) -> Mono<ServerRes
 
 위와 같이 Router Filter로 등록될 `logFilter`를 정의해줬다.
 
-```
+```kotlin showLineNumbers
 class DefaultServerRequestBuilder implements ServerRequest.Builder {
 	@Override
 	public ServerRequest.Builder body(String body) {
@@ -128,7 +128,7 @@ Request Body가 없는 경우에도 다른 정보(URI, 상태 코드 등)에 대
 
 만약 `defaultIfEmpty`를 호출하지 않으면 Request Body가 없는 경우 `bodyToMono`가 빈 `Mono`를 반환해서 그 다음 다운 스트림인 `flayMap`이 작동하지 않는다.
 
-```
+```kotlin showLineNumbers {7}
 @Router
 class QuizRouter {
     @Bean
@@ -194,7 +194,7 @@ Slf4j 구현체가 MDC를 사용하므로 결국은 MDC에 요청 식별자를 �
 
 Reactor Context는 MDC로 로그를 추적하기 어려운 부분인 컨텍스트 스위칭 부분에서 MDC 내의 요청 식별자를 갱신시켜주는 역할을 수행한다.
 
-```
+```kotlin showLineNumbers
 @Component
 class MdcFilter : WebFilter {
     override fun filter(exchange: ServerWebExchange, chain: WebFilterChain): Mono<Void> =
@@ -205,7 +205,7 @@ class MdcFilter : WebFilter {
 
 우린 `WebFliter`를 통해 요청이 들어오면 `contextWriter`를 통해 Reactor Context에 임의의 문자열을 넣어주도록 구현했다.
 
-```
+```kotlin showLineNumbers
 class MdcContextLifter<T>(private val coreSubscriber: CoreSubscriber<T>) : CoreSubscriber<T> {
     override fun onSubscribe(subscription: Subscription) {
         coreSubscriber.onSubscribe(subscription)
@@ -241,7 +241,7 @@ class MdcContextLifter<T>(private val coreSubscriber: CoreSubscriber<T>) : CoreS
 
 그 다음, 현재 Reactor Context의 값들을 MDC에 복사해주는 `MdcContextLifter`를 구현한다. 
 
-```
+```kotlin showLineNumbers
 @Configuration
 class MdcConfiguration {
     private val mdcContextKey = MdcConfiguration::class.java.name

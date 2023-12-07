@@ -1,8 +1,9 @@
-import MotionedDiv from '@/lib/motion'
-import Tag from '../Tag/Tag'
-import styles from './Post.module.css'
 import Link from 'next/link'
+import { Post } from 'contentlayer/generated'
+import MotionedDiv from '@/lib/motion'
 import { variants } from '../Board/Board'
+import styles from './Post.module.css'
+import Tag from '../Tag/Tag'
 
 const Post = ({ post }: { post: Post }) => {
   return (
@@ -15,7 +16,7 @@ const Post = ({ post }: { post: Post }) => {
             <Tag tag={tag} key={tag} />
           ))}
         </div>
-        <div className={styles.date}>{post.date}</div>
+        <div className={styles.date}>{post.date.substring(0, 10)}</div>
         <div className={styles.line} />
       </MotionedDiv>
     </Link>

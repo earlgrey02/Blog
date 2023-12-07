@@ -1,8 +1,14 @@
+import { allPosts } from 'contentlayer/generated'
+import { notFound } from 'next/navigation'
+import { useMDXComponent } from 'next-contentlayer/hooks'
+import mdxComponents from '@/lib/mdx'
 import styles from './Page.module.css'
-import { getPostById, getPosts } from '@/modules/post/api'
 
-const Page = async ({ params }: { params: { id: number } }) => {
-  const post = await getPostById(params.id)
+const Page = ({ params }: { params: { id: number } }) => {
+  const post = allPosts.find((post) => post.id == params.id)
+  if (!post) notFound()
+
+  const MdxContent = useMDXComponent(post.body.code)
 
   return (
     <main className={styles.container}>
@@ -10,24 +16,20 @@ const Page = async ({ params }: { params: { id: number } }) => {
       <div className={styles.intro}>
         <div className={styles.title}>{post.title}</div>
         <div className={styles.description}>{post.description}</div>
-        <div className={styles.date}>{post.date}</div>
+        <div className={styles.date}>{post.date.substring(0, 10)}</div>
         <hr />
       </div>
-      <section
-        className={styles.content}
-        dangerouslySetInnerHTML={{ __html: post.content }}
-      />
+      <section className={styles.content}>
+        <MdxContent components={mdxComponents} />
+      </section>
     </main>
   )
 }
 
-const generateStaticParams = async () => {
-  const posts = await getPosts()
-
-  return posts.map(({ id }) => ({
+const generateStaticParams = () =>
+  allPosts.map(({ id }) => ({
     id: id.toString()
   }))
-}
 
 export default Page
 export { generateStaticParams }
