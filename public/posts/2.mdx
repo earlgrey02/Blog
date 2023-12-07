@@ -1,8 +1,8 @@
 ---
 title: Reactor와 Coroutine
 description: WebFlux 환경에서 사용하던 Coroutine 코드들을 Reactor 기반으로 바꾼 이유
-date: 2023.10.21
-tags: Spring,Kotlin
+date: 2023-10-21
+tags: [Spring,Kotlin]
 ---
 SW 마에스트로에서 팀 프로젝트를 진행하면서 Spring Framework의 리액티브 프로그래밍(Reactive Programming) 모델인 Spring WebFlux를 사용했었다.
 
@@ -16,7 +16,7 @@ Reactor는 이 리액티브 스트림즈의 구현체이다.
 
 Reactor에서는 Publisher 구현체로 `Mono`와 `Flux`가 있다.
 
-```
+```kotlin showLineNumbers
 public abstract class Mono<T> implements CorePublisher<T> { ... }
 
 public abstract class Flux<T> implements CorePublisher<T> { ... }
@@ -30,7 +30,7 @@ Spring WebFlux는 논블로킹을 구현하기 위해 존재하는 것이나 다
 
 리액티브 프로그래밍은 이 리액티브 시퀀스를 만드는 데에서부터 시작된다.
 
-```
+```kotlin showLineNumbers
 fun checkAnswer(id: String, userId: String, request: CheckAnswerRequest): Mono<CheckAnswerResponse> =
     quizRepository.findById(id)
         .switchIfEmpty(Mono.error(QuizNotFoundException()))
@@ -85,7 +85,7 @@ fun checkAnswer(id: String, userId: String, request: CheckAnswerRequest): Mono<C
 
 Reactor는 순수 함수만을 다루므로 당연히 **부수 효과(Side Effect)가 없다.**
 
-```
+```kotlin
 subscribeOn(Schedulers.boundedElastic())
 ```
 
@@ -111,7 +111,7 @@ Kotlin Coroutine 공식 문서에서는 Coroutine을 경량형 스레드라고 �
 
 Spring WebFlux는 Kotlin의 Coroutine도 지원한다.
 
-```
+```kotlin showLineNumbers
 fun checkAnswer(request: ServerRequest): Mono<ServerResponse> =
     with(request) {
         Mono.zip(authentication(), bodyToMono<CheckAnswerRequest>())
@@ -122,7 +122,7 @@ fun checkAnswer(request: ServerRequest): Mono<ServerResponse> =
     }
 ```
 
-```
+```kotlin showLineNumbers {1, 4-5, 8}
 suspend fun checkAnswer(request: ServerRequest): ServerResponse =
     with(request) {
         val id = pathVariable("id")
@@ -140,7 +140,7 @@ suspend fun checkAnswer(request: ServerRequest): ServerResponse =
 
 `awaitBody()`, `bodyValueAndAwait` 등 'await'이 이름에 들어간 메서드들은 전부 Spring WebFlux에서 Coroutine을 지원하기 위해 만든 확장 함수들이다.
 
-```
+```kotlin showLineNumbers {5}
 private suspend fun <T> Publisher<T>.awaitOne(
     mode: Mode,
     default: T? = null
@@ -165,7 +165,7 @@ private suspend fun <T> Publisher<T>.awaitOne(
 
 예를 들면 Spring에서 런타임 프록시(Runtime Proxy)를 적용하는 과정에서 일시 중지 함수(Suspend Function)를 인식하지 못하는 오류 등이 있었다.
 
-```
+```kotlin showLineNumbers {1}
 public Object checkAnswer(@NotNull ServerRequest var1, @NotNull Continuation $completion) {
 	return checkAnswer$suspendImpl(this, var1, $completion);
 }
