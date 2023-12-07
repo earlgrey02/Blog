@@ -45,7 +45,7 @@ logging:
 
 그 이유는 다음과 같다.
 
-```kotlin showLineNumbers
+```java showLineNumbers
 public interface ServerRequest {
 	<T> Mono<T> bodyToMono(Class<? extends T> elementClass);
 
@@ -68,7 +68,7 @@ Spring WebFlux에서 요청(`ServerRequest`)에 대해 로깅을 하려면 Reque
 
 당연히 `bodyToMono`가 반환하는 `Mono`도 재생성된 `Mono`이므로 Pointcut에서 Request Body를 다시 가져올 수 있게 된다.
 
-```kotlin showLineNumbers
+```java showLineNumbers
 public interface ServerRequest {
 	static Builder from(ServerRequest other) {
 		return new DefaultServerRequestBuilder(other);
@@ -104,7 +104,7 @@ fun logFilter(request: ServerRequest, handler: (ServerRequest) -> Mono<ServerRes
 
 위와 같이 Router Filter로 등록될 `logFilter`를 정의해줬다.
 
-```kotlin showLineNumbers
+```java showLineNumbers
 class DefaultServerRequestBuilder implements ServerRequest.Builder {
 	@Override
 	public ServerRequest.Builder body(String body) {
