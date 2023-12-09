@@ -6,7 +6,7 @@ const variants = {
   animate: {
     opacity: 1,
     filter: 'blur(0px) brightness(100%)',
-    transition: { duration: 2.5, staggerChildren: 0.6 }
+    transition: { duration: 2.5, staggerChildren: 0.5 }
   }
 }
 
@@ -38,7 +38,7 @@ const Intro = () => {
         animate={{
           opacity: 1,
           transform: 'rotate(135deg)',
-          transition: { duration: 5, ease: [0, 0.8, 0.4, 1.0] }
+          transition: { duration: 3, ease: [0, 0.8, 0.4, 1.0] }
         }}
       />
     </div>
