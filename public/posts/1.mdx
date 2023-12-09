@@ -8,10 +8,9 @@ tags: [Spring,Kotlin]
 
 여기서 웹 계층 로깅이란 쉽게 말해서 요청 및 응답을 로그로 남기도록 하는 것을 말한다.
 
-
 ## Debug 로깅 설정을 사용해보자
 
-```yaml
+```yaml title="application.yml"
 logging:
   level:
     web: debug
@@ -32,14 +31,17 @@ logging:
 
 게다가 프로덕션 환경에서는 일반적으로 Info 레벨까지의 로깅을 하도록 하는 것이 원칙이므로 만을 Debug 로깅을 함부로 설정하기에는 힘들다.
 
-이러한 문제점들로 자체적인 웹 계층 로깅을 구현하기로 결정했다.
+<br/>
 
+이러한 문제점들로 인해 자체적인 웹 계층 로깅을 구현하기로 결정했다.
 
 ## 자체 로깅을 구현해보자
 
 보통 Spring에서 웹 계층 로깅을 자체적으로 구현한다면 Spring AOP를 사용한 예시가 가장 먼저 떠오를 것이다.
 
 로깅은 모든 컨트롤러에 적용되야 하므로 중복 코드가 발생할 것이고 이를 하나의 Aspect로 모듈화해서 사용하는 것이 당연히 중복 코드를 줄일 수 있다.
+
+<br/>
 
 하지만 Spring WebFlux 환경에서는 Spring AOP를 통한 로깅이 힘들다.
 
@@ -68,7 +70,7 @@ Spring WebFlux에서 요청(`ServerRequest`)에 대해 로깅을 하려면 Reque
 
 당연히 `bodyToMono`가 반환하는 `Mono`도 재생성된 `Mono`이므로 Pointcut에서 Request Body를 다시 가져올 수 있게 된다.
 
-```java showLineNumbers
+```java title="ServerRequest.java" showLineNumbers
 public interface ServerRequest {
 	static Builder from(ServerRequest other) {
 		return new DefaultServerRequestBuilder(other);
@@ -78,9 +80,11 @@ public interface ServerRequest {
 
 마침 `ServerRequest`에서는 다른 `ServerRequest`를 받아서 `ServerRequestBuilder`를 반환하는 정적 메서드가 존재했다.
 
+<br/>
+
 참고로 우리는 Spring WebFlux의 함수형 엔드포인트를 사용하므로 AOP가 아닌 Router Filter를 활용하기로 했다.
 
-```kotlin showLineNumbers
+```kotlin title="LogFilter.kt" showLineNumbers
 fun logFilter(request: ServerRequest, handler: (ServerRequest) -> Mono<ServerResponse>): Mono<ServerResponse> =
     with(request) {
         val logger = getLogger()
@@ -104,7 +108,7 @@ fun logFilter(request: ServerRequest, handler: (ServerRequest) -> Mono<ServerRes
 
 위와 같이 Router Filter로 등록될 `logFilter`를 정의해줬다.
 
-```java showLineNumbers
+```java title="DefaultSderverRequestBuilder.java" showLineNumbers
 class DefaultServerRequestBuilder implements ServerRequest.Builder {
 	@Override
 	public ServerRequest.Builder body(String body) {
@@ -122,13 +126,15 @@ class DefaultServerRequestBuilder implements ServerRequest.Builder {
 
 `bodyToMono`를 String 타입으로 받아오면 JSON 형태의 문자열이 반환되며, `ServerRequest.Builder`의 `body`는 다음과 같이 String 타입의 JSON 문자열을 받을 수 있다.
 
+<br/>
+
 추가로 `bodyToMono`로 받아온 `Mono`에 대해 `defaultIfEmpty`를 사용했다.
 
 Request Body가 없는 경우에도 다른 정보(URI, 상태 코드 등)에 대한 로깅은 작동해야 하므로 빈 문자열을 `Mono`의 기본 값으로 정의했다.
 
 만약 `defaultIfEmpty`를 호출하지 않으면 Request Body가 없는 경우 `bodyToMono`가 빈 `Mono`를 반환해서 그 다음 다운 스트림인 `flayMap`이 작동하지 않는다.
 
-```kotlin showLineNumbers {7}
+```kotlin title="QuizRouter.kt" showLineNumbers {7}
 @Router
 class QuizRouter {
     @Bean
@@ -160,6 +166,7 @@ class QuizRouter {
 ```
 
 우리가 구현한 로그에서 문제점이 하나 있었다.
+
 로컬 등의 환경에서는 로그를 확인하기 쉬웠는데 프로덕션 환경에서는 많은 로그가 뒤섞이면서 어떤 요청과 응답이 하나의 작업인지 알기 어렵다는 것이다.
 
 그래서 우린 로그를 추적하기 위해서 요청마다 임의의 식별자를 부여해주는 것을 생각했다. 
@@ -173,6 +180,8 @@ MDC(Mapped Diagnostic Context)는 스레드를 통해 특정 메타 정보를 �
 스레드 내부의 Map을 통해 값을 관리하는데, 이 과정에서 `ThreadLocal`을 사용한다.
 
 또한 Slf4j 구현체들은 MDC를 사용할 수 있도록 구현되어 있다.
+
+<br/>
 
 이 MDC를 Spring WebFlux 환경에서 그냥 사용하기에는 문제가 있다.
 
@@ -192,9 +201,11 @@ Reactor Context도 Map처럼 Key-Value 형태를 가지고 있다.
 
 Slf4j 구현체가 MDC를 사용하므로 결국은 MDC에 요청 식별자를 저장해야한다.
 
-Reactor Context는 MDC로 로그를 추적하기 어려운 부분인 컨텍스트 스위칭 부분에서 MDC 내의 요청 식별자를 갱신시켜주는 역할을 수행한다.
+<br/>
 
-```kotlin showLineNumbers
+여기서 Reactor Context는 MDC로 로그를 추적하기 어려운 부분인 컨텍스트 스위칭 부분에서 MDC 내의 요청 식별자를 갱신시켜주는 역할을 수행한다.
+
+```kotlin title="MdcFilter.kt" showLineNumbers
 @Component
 class MdcFilter : WebFilter {
     override fun filter(exchange: ServerWebExchange, chain: WebFilterChain): Mono<Void> =
@@ -205,7 +216,7 @@ class MdcFilter : WebFilter {
 
 우린 `WebFliter`를 통해 요청이 들어오면 `contextWriter`를 통해 Reactor Context에 임의의 문자열을 넣어주도록 구현했다.
 
-```kotlin showLineNumbers
+```kotlin title="MdcContextLifter.kt" showLineNumbers
 class MdcContextLifter<T>(private val coreSubscriber: CoreSubscriber<T>) : CoreSubscriber<T> {
     override fun onSubscribe(subscription: Subscription) {
         coreSubscriber.onSubscribe(subscription)
@@ -241,7 +252,7 @@ class MdcContextLifter<T>(private val coreSubscriber: CoreSubscriber<T>) : CoreS
 
 그 다음, 현재 Reactor Context의 값들을 MDC에 복사해주는 `MdcContextLifter`를 구현한다. 
 
-```kotlin showLineNumbers
+```kotlin title="MdcConfiguration.kt" showLineNumbers
 @Configuration
 class MdcConfiguration {
     private val mdcContextKey = MdcConfiguration::class.java.name
@@ -270,5 +281,7 @@ class MdcConfiguration {
 ```
 
 기존의 로그와 달리 위와 같이 식별자가 앞에 붙어 로그 추적이 쉬워진 것을 볼 수 있다.
+
+<br/>
 
 이렇게 자체적인 로깅을 구현하면 Info 레벨에서의 웹 계층 로깅을 구현할 수도 있고 특정 요청(Health Check 등)들은 로깅하지 않도록 설정할 수도 있어서 좋다고 생각한다.

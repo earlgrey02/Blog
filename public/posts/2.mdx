@@ -11,14 +11,14 @@ Spring WebFlux를 사용하면서 Reactor부터 Kotlin의 Coroutine까지 모두
 ## Reactor
 
 Spring WebFlux는 일반적으로 리액티브 스트림즈(Reactive Streams)를 통해 비동기 논블로킹(Non-Blocking)을 구현한다.
-
 Reactor는 이 리액티브 스트림즈의 구현체이다.
-
+<br/>
 Reactor에서는 Publisher 구현체로 `Mono`와 `Flux`가 있다.
 
-```kotlin showLineNumbers
+```java title="Mono.java" showLineNumbers
 public abstract class Mono<T> implements CorePublisher<T> { ... }
-
+```
+```java title="Flux.java" showLineNumbers
 public abstract class Flux<T> implements CorePublisher<T> { ... }
 ```
 
@@ -73,6 +73,8 @@ fun checkAnswer(id: String, userId: String, request: CheckAnswerRequest): Mono<C
 
 이처럼 **코드의 복잡성**은 Reactor의 문제점 중 하나이다.
 
+<br/>
+
 리액티브 프로그래밍은 **선언형 프로그래밍**을 따른다.
 
 선언형 프로그래밍은 함수형 프로그래밍의 특징도 함께 가지고 있는데, 우리가 알고 있는 `map`, `filter`, `reduce` 등의 순수 함수(Pure Function)를 사용하는 것이 선언형 프로그래밍에 속한다.
@@ -81,17 +83,21 @@ fun checkAnswer(id: String, userId: String, request: CheckAnswerRequest): Mono<C
 
 이러한 문제점이 리액티브 프로그래밍을 따르는 Reactor에도 따라오게 된 것이다.
 
+<br/>
+
 물론 선언형 프로그래밍의 장점도 곧 Reactor의 장점이 되기도 한다.
 
 Reactor는 순수 함수만을 다루므로 당연히 **부수 효과(Side Effect)가 없다.**
 
 ```kotlin
-subscribeOn(Schedulers.boundedElastic())
+.subscribeOn(Schedulers.boundedElastic())
 ```
 
 또한 Reactor는 **스레드를 통한 병렬 처리가 쉽다**는 점을 가지고 있다.
 
 전통적인 스레드 모델을 따르므로 당연히 스레드 전환을 통해 병렬 처리를 할 수 있는데, 단순히 스케줄러만 배치시켜주면 알아서 스레드를 전환시켜 작업을 수행한다.
+
+<br/>
 
 마지막으로 Reactor는 리액티브 프로그래밍의 **배압(Backpressure)을 지원**한다는 장점을 가지고 있다.
 
@@ -107,7 +113,9 @@ Kotlin Coroutine 공식 문서에서는 Coroutine을 경량형 스레드라고 �
 
 즉, 스레드보다 작은 서브 루틴들과 함수의 중지(Suspend)와 재개(Resume)를 통해 비동기 논블로킹 작업을 구현하는 것이다.
 
-당연히 스레드보다 작으므로 컨텍스트 스위칭(Context Switching) 비용이 적다. 
+당연히 스레드보다 작으므로 컨텍스트 스위칭(Context Switching) 비용이 적다.
+
+<br/>
 
 Spring WebFlux는 Kotlin의 Coroutine도 지원한다.
 
@@ -122,7 +130,7 @@ fun checkAnswer(request: ServerRequest): Mono<ServerResponse> =
     }
 ```
 
-```kotlin showLineNumbers {1, 4-5, 8}
+```kotlin showLineNumbers /await/ /Await/
 suspend fun checkAnswer(request: ServerRequest): ServerResponse =
     with(request) {
         val id = pathVariable("id")
@@ -138,9 +146,9 @@ suspend fun checkAnswer(request: ServerRequest): ServerResponse =
 
 `suspend`는 메서드가 Coroutine으로 작동하도록 해주는 Koltin의 키워드이다.
 
-`awaitBody()`, `bodyValueAndAwait` 등 'await'이 이름에 들어간 메서드들은 전부 Spring WebFlux에서 Coroutine을 지원하기 위해 만든 확장 함수들이다.
+`awaitBody`, `bodyValueAndAwait` 등 'await'이 이름에 속한 메서드들은 전부 Spring WebFlux에서 Coroutine을 지원하기 위해 만든 확장 함수들이다.
 
-```kotlin showLineNumbers {5}
+```kotlin title="Await.kt" showLineNumbers /subscribe/1
 private suspend fun <T> Publisher<T>.awaitOne(
     mode: Mode,
     default: T? = null
@@ -151,11 +159,15 @@ private suspend fun <T> Publisher<T>.awaitOne(
 }
 ```
 
-이러한 확장 함수들은 내부적으로 코루틴 내에서 Publisher의 `subscribe`를 호출해 논블로킹하게 결과 값을 가져오는 방식으로 작동한다. 
+이러한 확장 함수들은 내부적으로 코루틴 내에서 Publisher의 `subscribe`를 호출해 논블로킹하게 결과 값을 가져오는 방식으로 작동한다.
+
+<br/>
 
 우선 Coroutine은 함수형 프로그래밍을 따르는 Reactor와 달리 **명령형 프로그래밍**을 따르므로 코드가 이해하기 쉽고 직관적이라는 장점을 가지고 있다.
 
 사실 이거 하나로 엄청난 장점이 되긴 한다.
+
+<br/>
 
 하지만 우린 프로젝트에서 Coroutine으로 시작해서 결국 Reactor로 코드를 전부 바꿨었다.
 
@@ -165,15 +177,17 @@ private suspend fun <T> Publisher<T>.awaitOne(
 
 예를 들면 Spring에서 런타임 프록시(Runtime Proxy)를 적용하는 과정에서 일시 중지 함수(Suspend Function)를 인식하지 못하는 오류 등이 있었다.
 
-```java showLineNumbers {1}
+
+```java showLineNumbers /Continuation/1
 public Object checkAnswer(@NotNull ServerRequest var1, @NotNull Continuation $completion) {
 	return checkAnswer$suspendImpl(this, var1, $completion);
 }
 ```
-
 일시 중지 함수는 바이트 코드로 컴파일 되는 시점에서 `Continuation`이라는 객체를 인자로 더 받게 된다.
 
 이로 인해 메서드의 시그니처가 바뀌는 점에서 문제가 생기는 것 같다.
+
+<br/>
 
 또한 기본적으로 Spring의 Reactive Stack은 Reactor를 기반으로 한다.
 
