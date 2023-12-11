@@ -6,9 +6,9 @@ tags: [Next.js]
 ---
 이번에 블로그를 만들면서 Next.js를 다루게 되었는데, 이때 사용했던 렌더링 기법인 CSR(Client Side Rendering), SSR(Server Side Rendering), SSG(Static Site Generation)에 대해서 정리하고자 한다.
 
-## CSR
+## CSR(Client Side Rendering)
 
-CSR은 클라이언트에서 View를 렌더링하는 기법이다.
+CSR(Client Side Rendering)은 클라이언트에서 View를 렌더링하는 기법이다.
 
 즉, View를 그려내는 주체는 클라이언트(브라우저)이며 JavaScript를 통해 View를 그려내는 것이다.
 
@@ -48,9 +48,9 @@ React.js는 Virtual DOM을 이용해서 실제 변경사항이 있는 부분만 
 
 변경사항을 감지하는 부분을 컴포넌트(Component)라는 단위로 사용한다.
 
-## SSR
+## SSR(Server Side Rendering)
 
-반대로 SSR은 서버에서 View를 렌더링하는 기법이다.
+반대로 SSR(Server Side Rendering)은 서버에서 View를 렌더링하는 기법이다.
 
 즉, View를 그려내는 주체는 서버이다.
 
@@ -90,7 +90,7 @@ React.js를 기반으로 하므로 당연히 CSR을 사용한다.
 
 Next.js에서는 이를 모두 가진 렌더링 기법인 SSG가 있다.
 
-## SSG
+## SSG(Static Site Generation)
 
 SSG(Static Site Generation)는 CSR과 SSR 사이의 모든 장점을 가진 렌더링 기법 중 하나이다.
 
@@ -106,7 +106,7 @@ SSG는 라우팅 되는 시점이 아닌 빌드 시에 정적으로 페이지를
 
 만약 데이터가 일정 주기마다 변하는 SSG 페이지를 만들고 싶다면 ISR이라는 렌더링 기법을 사용할 수 있다.
 
-## ISR
+## ISR(Incremental Static Regeneration)
 
 ISR(Incremental Static Regeneration)은 일정 주기마다 페이지를 정적으로 재생성하는 렌더링 기법이다.
 
