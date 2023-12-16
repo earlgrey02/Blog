@@ -20,7 +20,7 @@ const Page = ({ params }: { params: { id: number } }) => {
         <hr />
       </div>
       <section className={styles.content}>
-        <MdxContent components={mdxComponents} />
+        <MdxContent components={mdxComponents(post.id)} />
       </section>
     </main>
   )
