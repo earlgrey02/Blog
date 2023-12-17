@@ -87,7 +87,7 @@
   overflow-x: scroll;
 }
 
-.content > p > code {
+.content > div > code {
   padding: 0.3rem;
   border-radius: 0.3rem;
   font-size: calc(0.2vw + 0.7rem);
