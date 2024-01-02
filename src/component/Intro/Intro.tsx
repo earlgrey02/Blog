@@ -23,10 +23,10 @@ const Intro = () => {
           earlgrey02&apos;s blog
         </MotionedDiv>
         <MotionedDiv className={styles.description} variants={variants}>
-          Backend를 공부하는 개발 블로그입니다.
+          DevOps를 공부하는 기술 블로그입니다.
         </MotionedDiv>
         <MotionedDiv className={styles.tags} variants={variants}>
-          #Kotlin #Spring #Kubernetes
+          #Kubernetes #Kotlin #Spring
         </MotionedDiv>
       </MotionedDiv>
       <MotionedDiv
