@@ -10,7 +10,7 @@ const linkVariants = {
     transition: {
       duration: 1,
       staggerChildren: 0.5,
-      delayChildren: 2
+      delayChildren: 1.5
     }
   }
 }
@@ -24,7 +24,7 @@ const activityVariants = {
     transition: {
       duration: 1,
       staggerChildren: 0.5,
-      delayChildren: 3.5
+      delayChildren: 3
     }
   }
 }
@@ -32,90 +32,108 @@ const activityVariants = {
 const Page = () => {
   return (
     <div className={styles.container}>
-      <div className={styles.introduction}>
-        <div className={styles.header}>
-          <MotionedDiv
-            initial={{
-              opacity: 0,
-              y: 10,
-              filter: 'blur(0.8px)'
-            }}
-            animate={{
-              opacity: 1,
-              y: 0,
-              filter: 'blur(0px)',
-              transition: { duration: 2 }
-            }}
-          >
-            Hello World!
-          </MotionedDiv>
-          <MotionedDiv
-            initial={{ opacity: 0, y: 10, filter: 'blur(0.8px)' }}
-            animate={{
-              opacity: 1,
-              y: 0,
-              filter: 'blur(0px)',
-              transition: { duration: 2, delay: 0.5 }
-            }}
-          >
-            저는 정상윤입니다.
-          </MotionedDiv>
-        </div>
+      <Introduction />
+      <Links />
+      <Activities />
+    </div>
+  )
+}
+
+const Introduction = () => {
+  return (
+    <div className={styles.introduction}>
+      <div className={styles.header}>
         <MotionedDiv
-          className={styles.description}
-          initial={{ opacity: 0, filter: 'blur(0.8px)' }}
+          initial={{
+            opacity: 0,
+            y: 10,
+            filter: 'blur(0.8px)'
+          }}
           animate={{
             opacity: 1,
+            y: 0,
             filter: 'blur(0px)',
-            transition: { duration: 2, delay: 1 }
+            transition: { duration: 2 }
           }}
         >
-          많은 사람들에게 가치있는 서비스를 개발하기 위해 기술을 깊이있게
-          공부합니다.
+          Hello World!
         </MotionedDiv>
         <MotionedDiv
-          className={styles.links}
-          variants={linkVariants}
-          initial="initial"
-          animate="animate"
-        >
-          <MotionedDiv className={styles.link} variants={linkVariants}>
-            <Link href="https://github.com/earlgrey02" target="_blank">
-              GitHub
-            </Link>
-          </MotionedDiv>
-          <MotionedDiv className={styles.link} variants={linkVariants}>
-            <Link href="https://www.earlgrey02.com" target="_blank">
-              Blog
-            </Link>
-          </MotionedDiv>
-        </MotionedDiv>
-      </div>
-      <div className={styles.activities}>
-        <MotionedDiv
-          className={styles.header}
-          initial={{ opacity: 0, filter: 'blur(0.8px)' }}
+          initial={{ opacity: 0, y: 10, filter: 'blur(0.8px)' }}
           animate={{
             opacity: 1,
+            y: 0,
             filter: 'blur(0px)',
-            transition: { duration: 2, delay: 3 }
+            transition: { duration: 2, delay: 0.5 }
           }}
         >
-          Activites
-        </MotionedDiv>
-        <MotionedDiv
-          variants={activityVariants}
-          initial="initial"
-          animate="animate"
-        >
-          <MotionedDiv className={styles.activity} variants={activityVariants}>
-            - SW 마에스트로 14기
-          </MotionedDiv>
-          <MotionedDiv className={styles.activity} variants={activityVariants}>
-            - 삼육대학교 멋쟁이 사자처럼 10기 운영진
-          </MotionedDiv>
+          저는 정상윤입니다.
         </MotionedDiv>
       </div>
+      <MotionedDiv
+        className={styles.description}
+        initial={{ opacity: 0, filter: 'blur(0.8px)' }}
+        animate={{
+          opacity: 1,
+          filter: 'blur(0px)',
+          transition: { duration: 2, delay: 1 }
+        }}
+      >
+        많은 사람들이 필요로 하는 가치있는 서비스를 개발하는 것을 목표로 하고
+        있습니다.
+      </MotionedDiv>
+    </div>
+  )
+}
+
+const Links = () => {
+  return (
+    <MotionedDiv
+      className={styles.links}
+      variants={linkVariants}
+      initial="initial"
+      animate="animate"
+    >
+      <MotionedDiv className={styles.link} variants={linkVariants}>
+        <Link href="https://github.com/earlgrey02" target="_blank">
+          GitHub
+        </Link>
+      </MotionedDiv>
+      <MotionedDiv className={styles.link} variants={linkVariants}>
+        <Link href="https://www.earlgrey02.com" target="_blank">
+          Blog
+        </Link>
+      </MotionedDiv>
+    </MotionedDiv>
+  )
+}
+
+const Activities = () => {
+  return (
+    <div className={styles.activities}>
+      <MotionedDiv
+        className={styles.header}
+        initial={{ opacity: 0, filter: 'blur(0.8px)' }}
+        animate={{
+          opacity: 1,
+          filter: 'blur(0px)',
+          transition: { duration: 2, delay: 2.5 }
+        }}
+      >
+        Activites
+      </MotionedDiv>
+      <MotionedDiv
+        variants={activityVariants}
+        initial="initial"
+        animate="animate"
+      >
+        <MotionedDiv className={styles.activity} variants={activityVariants}>
+          - SW 마에스트로 14기
+        </MotionedDiv>
+        <MotionedDiv className={styles.activity} variants={activityVariants}>
+          - 삼육대학교 멋쟁이 사자처럼 10기 운영진
+        </MotionedDiv>
+      </MotionedDiv>
     </div>
   )
 }
