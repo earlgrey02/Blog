@@ -1,26 +1,42 @@
-import Link from 'next/link'
+'use client'
 import { Post } from 'contentlayer/generated'
-import MotionedDiv from '@/lib/motion'
-import { variants } from '../Board/Board'
+import { useRouter } from 'next/navigation'
 import styles from './Post.module.css'
-import Tag from '../Tag/Tag'
+import MotionedDiv from '@/lib/motion'
+
+const variants = {
+  initial: { opacity: 0, y: 10, filter: 'blur(0.5px)' },
+  animate: {
+    opacity: 1,
+    y: 0,
+    filter: 'blur(0px)',
+    transition: { duration: 1, staggerChildren: 0.5, delayChildren: 0.5 }
+  }
+}
 
 const Post = ({ post }: { post: Post }) => {
+  const router = useRouter()
+
   return (
-    <Link href={`/post/${post.id}`} className={styles.container}>
+    <div
+      className={styles.container}
+      onClick={() => router.push(`/post/${post.id}`)}
+    >
       <MotionedDiv className={styles.information} variants={variants}>
         <div className={styles.title}>{post.title}</div>
         <div className={styles.description}>{post.description}</div>
         <div className={styles.tags}>
           {post.tags.map((tag) => (
-            <Tag tag={tag} key={tag} />
+            <div className={styles.tag} key={tag}>
+              {tag}
+            </div>
           ))}
         </div>
         <div className={styles.date}>{post.date.substring(0, 10)}</div>
-        <div className={styles.line} />
       </MotionedDiv>
-    </Link>
+    </div>
   )
 }
 
+export { variants }
 export default Post

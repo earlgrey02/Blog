@@ -1,6 +1,56 @@
 .container {
+  padding-top: 4rem;
+}
+
+.introduction {
   display: flex;
   flex-direction: column;
-  width: 100%;
-  height: 100%;
+  border-radius: 2rem;
+}
+
+.introduction > .header {
+  font-weight: bold;
+  font-size: calc(0.2vw + 1.9rem);
+  letter-spacing: -0.1rem;
+}
+
+.description {
+  margin: calc(0.2vw + 0.4rem) 0;
+  font-size: calc(0.2vw + 0.9rem);
+  font-weight: lighter;
+  word-break: keep-all;
+}
+
+.links {
+  display: flex;
+  gap: calc(0.1vw + 0.4rem);
+}
+
+.link {
+  padding: calc(0.1vw + 0.4rem);
+  border-radius: 0.2rem;
+  font-size: calc(0.1vw + 0.8rem);
+  background-color: rgb(240, 240, 240);
+  transition: 0.3s;
+}
+
+.link:hover {
+  cursor: pointer;
+  background-color: rgb(220, 220, 220);
+}
+
+.activities {
+  margin-top: 3.4rem;
+}
+
+.activities > .header {
+  margin-bottom: 0.6rem;
+  font-size: calc(0.2vw + 1.5rem);
+  font-weight: bold;
+}
+
+.activity {
+  margin-top: 0.3rem;
+  font-size: calc(0.1vw + 0.9rem);
+  letter-spacing: -0.05rem;
 }
