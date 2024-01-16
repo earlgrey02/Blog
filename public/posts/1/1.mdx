@@ -20,7 +20,7 @@ logging:
 
 하지만 이 방법은 원치 않는 로그들도 보여진다는 단점이 있다.
 
-```
+```console
 2023-11-19 14:34:25.657 DEBUG [reactor-http-epoll-4] o.s.w.r.f.s.s.RouterFunctionMapping: [2b5e844f-985] Mapped to org.springframework.web.reactive.function.server.HandlerFilterFunction$$Lambda$2224/0x00007f8cf4aa21b0@43585181
 2023-11-19 14:34:25.718 DEBUG [nioEventLoopGroup-3-2] o.s.h.c.j.Jackson2JsonEncoder: [2b5e844f-986] Encoding [ChapterResponse(id=65438dacf301c80833d99142, description=스프링 IoC 컨테이너 및 Bean 소개, document=https://do (truncated)...]
 ```
@@ -108,7 +108,7 @@ fun logFilter(request: ServerRequest, handler: (ServerRequest) -> Mono<ServerRes
 
 위와 같이 Router Filter로 등록될 `logFilter`를 정의해줬다.
 
-```java title="DefaultSderverRequestBuilder.java" showLineNumbers
+```java title="DefaultServerRequestBuilder.java" showLineNumbers
 class DefaultServerRequestBuilder implements ServerRequest.Builder {
 	@Override
 	public ServerRequest.Builder body(String body) {
@@ -145,17 +145,16 @@ class QuizRouter {
         }
 }
 ```
-
-우리가 정의한 `logFilter`를 설정하면 다음과 같이 Info 레벨에서 웹 계층 로그가 출력된다.
-
-```
+```console
 2023-11-17 03:44:57.498 INFO [reactor-http-epoll-4] o.s.w.r.f.s.ServerRequest: HTTP GET /api/quiz/655285ef8ffe5c32be680995
 2023-11-17 03:44:57.498 INFO [reactor-http-epoll-4] o.s.w.r.f.s.ServerRequest: HTTP 200 OK
 ```
 
+우리가 정의한 `logFilter`를 설정하면 위와 같이 Info 레벨에서 웹 계층 로그가 출력된다.
+
 ## 추적하기 어려운 로그들
 
-```
+```console
 2023-11-17 03:44:56.939 INFO [reactor-http-epoll-4] o.s.w.r.f.s.ServerRequest: HTTP GET /api/quiz/655365208ffe5c32be680a58
 2023-11-17 03:44:56.939 INFO [reactor-http-epoll-4] o.s.w.r.f.s.ServerRequest: HTTP 200 OK
 2023-11-17 03:44:57.471 INFO [reactor-http-epoll-4] o.s.w.r.f.s.ServerRequest: HTTP GET /api/quiz/655285ef8ffe5c32be680995
@@ -273,7 +272,7 @@ class MdcConfiguration {
 
 각각의 리액티브 연산자마다 값을 발행하면 `MdcContextLifter`의 `onNext` 내의 `copyToMdc`가 호출된다.
 
-```
+```console
 2023-11-17 03:44:57.668 INFO [reactor-http-epoll-4] o.s.w.r.f.s.ServerRequest: [4c70373e] HTTP GET /api/quiz/655365208ffe5c32be680a59
 2023-11-17 03:44:57.668 INFO [reactor-http-epoll-4] o.s.w.r.f.s.ServerRequest: [4c70373e] HTTP 200 OK
 2023-11-17 03:44:57.699 INFO [reactor-http-epoll-4] o.s.w.r.f.s.ServerRequest: [0276ff18] HTTP GET /api/quiz/655365208ffe5c32be680a59
