@@ -79,8 +79,7 @@ const Introduction = () => {
           transition: { duration: 2, delay: 1 }
         }}
       >
-        많은 사람들이 필요로 하는 가치있는 서비스를 개발하는 것을 목표로 하고
-        있습니다.
+        가치있는 서비스를 개발하기 위해 기술을 공부합니다.
       </MotionedDiv>
     </div>
   )
@@ -102,6 +101,11 @@ const Links = () => {
       <MotionedDiv className={styles.link} variants={linkVariants}>
         <Link href="https://www.earlgrey02.com" target="_blank">
           Blog
+        </Link>
+      </MotionedDiv>
+      <MotionedDiv className={styles.link} variants={linkVariants}>
+        <Link href="https://www.instagram.com/earlgrey_ee" target="_blank">
+          Instagram
         </Link>
       </MotionedDiv>
     </MotionedDiv>

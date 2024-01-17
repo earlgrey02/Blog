@@ -47,10 +47,3 @@
   cursor: pointer;
   scale: 1.01;
 }
-
-@media (max-width: 540px) {
-  .container {
-    min-width: 0;
-    width: 100%;
-  }
-}
