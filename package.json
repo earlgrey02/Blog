@@ -20,6 +20,7 @@
     "react-dom": "^18",
     "rehype": "^13.0.1",
     "rehype-pretty-code": "^0.12.0",
+    "remark-breaks": "^4.0.0",
     "shikiji": "^0.7.6"
   },
   "devDependencies": {
