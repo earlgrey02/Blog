@@ -1,5 +1,6 @@
 import { defineDocumentType, makeSource } from 'contentlayer/source-files'
 import rehypePrettyCode from 'rehype-pretty-code'
+import remarkBreaks from 'remark-breaks'
 
 const Post = defineDocumentType(() => ({
   name: 'Post',
@@ -40,7 +41,7 @@ const source = makeSource({
   contentDirPath: 'public/posts',
   documentTypes: [Post],
   mdx: {
-    remarkPlugins: [],
+    remarkPlugins: [remarkBreaks],
     rehypePlugins: [
       [
         rehypePrettyCode as any,
