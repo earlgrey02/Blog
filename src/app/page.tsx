@@ -103,11 +103,6 @@ const Links = () => {
           Blog
         </Link>
       </MotionedDiv>
-      <MotionedDiv className={styles.link} variants={linkVariants}>
-        <Link href="https://www.instagram.com/earlgrey_ee" target="_blank">
-          Instagram
-        </Link>
-      </MotionedDiv>
     </MotionedDiv>
   )
 }

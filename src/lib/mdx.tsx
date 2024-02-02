@@ -4,6 +4,7 @@ import Link from 'next/link'
 import styles from '@/app/post/[id]/Page.module.css'
 
 const mdxComponents = (id: number): MDXComponents => ({
+  p: ({ children }) => <span>{children}</span>,
   a: ({ href, children }) => <Link href={href as string}>{children}</Link>,
   img: ({ src, alt }) => (
     <div className={styles.image}>
