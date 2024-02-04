@@ -29,6 +29,9 @@
 }
 
 .tag {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: calc(0.1vw + 0.3rem);
   border-radius: 0.2rem;
   font-size: calc(0.2vw + 0.6rem);
