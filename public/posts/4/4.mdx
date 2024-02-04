@@ -1,0 +1,192 @@
+---
+title: 클러스터의 백업과 복구
+description: 쿠버네티스에서 ETCD를 통해 클러스터를 백업하고 복구하는 방법
+date: 2024-02-03
+tags: [Kubernetes, Certified Kubernetes Administrator]
+---
+이번 글은 쿠버네티스에서 ETCD를 통해 클러스터 환경을 백업하고 복구하는 방법에 대한 글이다.
+
+## ETCD
+
+![ETCD](1.svg)
+
+ETCD는 분산형 Key-Value 저장소이다.
+비슷한 Key-Value 저장소인 Redis처럼 조회 성능이 좋기 때문에 메타 데이터 등의 작은 크기의 데이터를 다루는데 적합하다.
+
+<br/><br/>
+
+```console
+etcdctl set <key> <value>
+```
+
+ETCD는 함께 제공되는 CLI(Command Line Interface)인 `etcdctl`을 통해 접근할 수 있다.
+
+## ETCD in Kubernetes
+
+쿠버네티스에서 ETCD는 마스터 노드 내에 존재하며 클러스터 내의 `Node`, `Pod`, `Config`, `Secret`, `Role` 등에 대한 모든 정보들을 가지고 있다.
+쿠버네티스의 CLI인 `kubectl`로 가져오는 정보들은 모두 ETCD로 부터 가져오는 것들이다.
+클러스터 내의 모든 정보를 가지고 있기 때문에 ETCD의 데이터만 있다면 언제든지 클러스터를 복구할 수 있다.
+
+<br/><br/>
+
+```console {5}
+> kubectl get pods -n kube-system
+NAME                                   READY   STATUS    RESTARTS   AGE
+coredns-5d78c9869d-6b6zd               1/1     Running   0          12m
+coredns-5d78c9869d-8szh6               1/1     Running   0          12m
+etcd-controlplane                      1/1     Running   0          12m
+kube-apiserver-controlplane            1/1     Running   0          12m
+kube-controller-manager-controlplane   1/1     Running   0          12m
+kube-proxy-crxgd                       1/1     Running   0          12m
+kube-scheduler-controlplane            1/1     Running   0          12m
+```
+
+Kubeadm 기반 클러스터에서 ETCD는 `kube-system` 네임스페이스에 속한 Static Pod로 배포되어 있으므로 `/etc/kubernetes/manifests`에 있는 `etcd.yaml`로 ETCD에 대한 정보를 볼 수 있다.
+
+```yaml title="etcd.yaml" showLineNumbers {12, 14, 19, 20, 29}
+apiVersion: v1
+kind: Pod
+metadata:
+    ...
+spec:
+  containers:
+    name: etcd
+    image: registry.k8s.io/etcd:3.5.7-0
+  - command:
+    - etcd
+    - --advertise-client-urls=https://192.12.77.3:2379
+    - --cert-file=/etc/kubernetes/pki/etcd/server.crt
+    - --client-cert-auth=true
+    - --data-dir=/var/lib/etcd
+    - --experimental-initial-corrupt-check=true
+    - --experimental-watch-progress-notify-interval=5s
+    - --initial-advertise-peer-urls=https://192.12.77.3:2380
+    - --initial-cluster=controlplane=https://192.12.77.3:2380
+    - --key-file=/etc/kubernetes/pki/etcd/server.key
+    - --listen-client-urls=https://127.0.0.1:2379,https://192.12.77.3:2379
+    - --listen-metrics-urls=http://127.0.0.1:2381
+    - --listen-peer-urls=https://192.12.77.3:2380
+    - --name=controlplane
+    - --peer-cert-file=/etc/kubernetes/pki/etcd/peer.crt
+    - --peer-client-cert-auth=true
+    - --peer-key-file=/etc/kubernetes/pki/etcd/peer.key
+    - --peer-trusted-ca-file=/etc/kubernetes/pki/etcd/ca.crt
+    - --snapshot-count=10000
+    - --trusted-ca-file=/etc/kubernetes/pki/etcd/ca.crt
+    volumeMounts:
+    - mountPath: /var/lib/etcd
+      name: etcd-data
+    - mountPath: /etc/kubernetes/pki/etcd
+      name: etcd-certs
+    ...
+```
+
+Manifest의 내용을 보면 ETCD 내의 데이터가 저장되는 디렉토리와 ETCD의 엔드포인트, ETCD가 독립적으로 인증 기관(Certificate Authority)을 가지고 있다는 사실들을 알 수 있다.
+
+## 클러스터 백업
+
+위 정보들을 이용해 ETCD 내의 데이터를 저장해 클러스터를 백업할 것이다.
+
+```console
+export ETCDCTL_API=3
+```
+```console {3}
+> etcdctl version
+etcdctl version: 3.3.13
+API version: 3.3
+```
+
+백업을 하기 전에 `etcdctl`의 API 버전을 3 이상으로 설정해야 한다.
+
+
+```console
+etcdctl snapshot save <snapshot_path>
+```
+
+다음으로 `etcdctl snapshot save`을 통해 스냅샷을 생성해 특정 경로에 저장한다.
+이때, 추가 인자로 CA 인증서, 서버 인증서, Private Key가 필요하다.
+앞서 보았던 ETCD의 Manifest 파일에 정보가 있다.
+
+```console
+etcdctl snapshot save --cacert=/etc/kubernetes/pki/etcd/ca.crt --cert=/etc/kubernetes/pki/etcd/server.crt --key=/etc/kubernetes/pki/etcd/server.key /opt/snapshot.db
+```
+```console /snapshot.db/
+/opt > ls
+cni  containerd  snapshot.db
+```
+
+명령을 실행하면 `/opt/snapshot.db`가 생성된 것을 볼 수 있다.
+
+## 클러스터 복구
+
+```console
+> kubectl get all
+NAME                 TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)   AGE
+service/kubernetes   ClusterIP   10.96.0.1    <none>        443/TCP   3m47s
+```
+
+`default` 네임스페이스에 존재하는 Deployment, Pod 등의 모든 Object를 삭제했다.
+
+```console
+etcdctl snapshot restore <snapshot_path>
+```
+
+`etcdctl`을 통해 스냅샷을 가지고 클러스터를 복구할 수 있다.
+이때, 추가 인자로 복구할 데이터를 저장할 디렉토리를 지정할 수 있다.
+
+```console
+etcdctl snapshot restore --data-dir /var/lib/etcd-from-backup /opt/snapshot-pre-boot.db
+```
+```console /etcd-from-backup/
+/var/lib > ls
+apt       cni         dbus    dpkg  etcd-from-backup  git  kubelet  misc        pam       private  rancher  systemd  vim
+buildkit  containerd  docker  etcd  gems              k0s  man-db   PackageKit  polkit-1  python   sudo     ucf
+```
+
+명령을 실행하면 `/var/lib/etcd-from-backup`이 생성된 것을 볼 수 있다.
+
+
+```yaml title="etcd.yaml" showLineNumbers {9}
+apiVersion: v1
+kind: Pod
+metadata:
+    ...
+spec:
+  containers:
+    ...
+    volumeMounts:
+    - mountPath: /var/lib/etcd-from-backup
+      name: etcd-data
+    - mountPath: /etc/kubernetes/pki/etcd
+      name: etcd-certs
+    ...
+```
+
+마지막으로 ETCD의 Manifest 파일에서 기존에 마운트하고 있던 데이터 디렉토리를 복원한 데이터 디렉토리로 바꿔준다.
+이렇게 되면 ETCD가 복원된 데이터를 참조하게 된다.
+내부적으로 Kubectl이 ETCD의 변경 사항을 감지하고 클러스터 내의 상태를 변경한다.
+
+```console
+> kubectl get all
+NAME                        READY   STATUS    RESTARTS   AGE
+pod/blue-6b478c8dbf-2pxxs   1/1     Running   0          47m
+pod/blue-6b478c8dbf-bjqwm   1/1     Running   0          47m
+pod/blue-6b478c8dbf-wcqww   1/1     Running   0          47m
+pod/red-6684f7669d-7cqct    1/1     Running   0          47m
+pod/red-6684f7669d-cvmg4    1/1     Running   0          47m
+
+NAME                   TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)        AGE
+service/blue-service   NodePort    10.98.76.47     <none>        80:30082/TCP   47m
+service/kubernetes     ClusterIP   10.96.0.1       <none>        443/TCP        50m
+service/red-service    NodePort    10.97.154.230   <none>        80:30080/TCP   47m
+
+NAME                   READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/blue   3/3     3            3           47m
+deployment.apps/red    2/2     2            2           47m
+
+NAME                              DESIRED   CURRENT   READY   AGE
+replicaset.apps/blue-6b478c8dbf   3         3         3       47m
+replicaset.apps/red-6684f7669d    2         2         2       47m
+```
+
+모든 Object를 조회하면 클러스터가 복구가 된 것을 볼 수 있다.

@@ -1,0 +1,354 @@
+---
+title: Spring Batch를 활용한 외부 데이터 동기화
+description: Spring Batch와 Scheduler를 통해 주기적으로 데이터를 동기화하는 방법
+date: 2024-01-25
+tags: [Kotlin, Spring, Spring Batch]
+---
+이번에 토이 프로젝트로 학교 편의 앱을 개발하면서 우리 학교의 API를 사용하게 되었다.
+구체적으로는 강의 검색 기능으로, 학교의 강의 조회 API를 이용해 기존에 존재하는 학교 사이트의 강의 검색 기능의 속도나 편의를 개선해서 만들고자 했다.
+
+## 외부 API 호출의 문제점
+
+![](1.png)
+
+문제는 학교 API의 지연 시간이 꽤 크다는 것이다.
+또한 요청과 응답이 모두 XML 형식이며 직렬화하는 과정도 복잡했었다.
+이렇게 되면 아무리 서버에서 성능 최적화를 수행해도 외부 API에 의존하는 이상 성능이 안좋을 수 밖에 없다.
+
+<br/><br/>
+
+그래서 주기적으로 학교 데이터베이스와 서버 데이터베이스를 동기화해 성능이 좋은 서버 데이터베이스를 통해 기능을 제공하기로 했다.
+
+## Spring Batch with Scheduler
+
+난 대용량 데이터를 처리하기 위해 사용하는 Spring Batch로 학교 데이터베이스와 서버 데이터베이스를 동기화하는 배치 작업을 정의하기로 했다.
+그리고 Spring Scheduler를 통해 이 작업을 주기적으로 실행시킬 것이다.
+
+## Spring Batch 설정
+
+```yaml title="application.yaml" showLineNumbers
+spring:
+  datasource:
+    url: jdbc:h2:mem:batch
+    username: sa
+    password:
+    driverClassName: org.h2.Driver
+```
+
+Spring Batch에서는 배치 작업을 관리하는 메타 데이터를 저장할 공간이 필요하다.
+이에 대해서는 우선은 H2를 사용하기로 했다.
+
+```kotlin title="BatchConfiguration.kt" showLineNumbers {1}
+@EnableScheduling
+@Configuration
+class BatchConfiguration
+```
+
+또한 배치 작업에 Scheduling을 적용하기 위해 `@EnableScheduling`을 등록한 `BatchConfiguration`을 구현했다.
+
+## Step 구현
+
+`Step`은 Chunk나 Tasklet을 기반으로 구현할 수 있다.
+Tasklet 기반 배치는 `Step`을 하나의 메서드로 한번에 처리한다.
+반면, Chunk 기반 배치는 `Step`을 `read()`, `process()`, `write()`로 구성해 설정한 `chunk` 수만큼 데이터를 묶어 처리한다.
+즉, `chunk`가 5인 경우 `ItemReader`와 `ItemProcessor`가 데이터를 각각 1개씩 읽고 처리한 후 5개를 `ItemWriter`에 한번에 전달한다.
+
+<br/><br/>
+
+학교 API로부터 각 연도와 학기 별로 강의들을 조회할 것이므로 Chunk 기반 배치를 사용한다면 `chunk`를 1로 설정하게 된다.
+그러므로 Chunk 기반 배치가 아닌 Tasklet 기반 배치를 사용해도 성능 차이가 없긴 하다.
+그래도 Chunk 기반 배치 구현이 어려운 것이 아니므로 Chunk 기반 배치를 통해 구현을 해보았다.
+
+```java title="ItemReader.java" showLineNumbers
+@FunctionalInterface
+public interface ItemReader<T> {
+	T read() throws Exception, UnexpectedInputException, ParseException, NonTransientResourceException;
+}
+```
+```java title="ItemWriter.java" showLineNumbers
+@FunctionalInterface
+public interface ItemWriter<T> {
+	void write(@NonNull Chunk<? extends T> chunk) throws Exception;
+}
+```
+
+그 다음으로 `Step`을 구성할 `ItemReader`와 `ItemWriter`를 구현할 것이다.
+추가적인 처리가 없으므로 `ItemProcessor`는 구현하지 않을 것이다.
+
+```kotlin title="UpdateLecturesReader.kt" showLineNumbers
+class UpdateLecturesReader(
+    private val lectureClient: LectureClient
+) : ItemReader<Flux<Lecture>> {
+    private val semesters = enumValues<Semester>()
+    private val years = (2020..Year.now().value).toList()
+    private val pairs = years.flatMap { year ->
+        semesters.map { semester ->
+            year to semester
+        }
+    }
+    private var idx = 0
+
+    override fun read(): Flux<Lecture>? =
+        pairs.getOrNull(idx++)
+            ?.let { (year, semester) -> lectureClient.getLecturesByYearAndSemester(year, semester) }
+}
+```
+
+`UpdateLecturesReader`는 각 연도와 학기를 순회하며 학교 API로부터 강의들을 조회한다.
+`read()`에서 `null`을 반환하면 작업을 종료한다.
+
+```kotlin title="UpdateLecturesWriter.kt" showLineNumbers
+class UpdateLecturesWriter(
+    private val lectureRepository: LectureRepository
+) : ItemWriter<Flux<Lecture>> {
+    override fun write(chunk: Chunk<out Flux<Lecture>>) {
+        lectureRepository.saveAll(chunk.items.first())
+            .collectList()
+            .block()
+    }
+}
+```
+
+`UpdateLecturesWriter`는 조회한 모든 강의들을 데이터베이스에 저장한다.
+Spring Batch는 아직 리액티브 프로그래밍을 지원하지 않으므로 Spring WebFlux 환경에서 Spring Batch를 사용할때는 `block()`을 통해 스레드를 블로킹 해야한다.
+그렇지 않으면 모든 값들을 구독한 채로 배치 스레드가 종료되어 작업이 완료되지 못한다.
+
+```kotlin title="LectureBatchConfiguration.kt" showLineNumbers
+@JobScope
+@Bean
+fun updateLecturesStep(): Step =
+    StepBuilder("updateLecturesStep", jobRepository)
+        .chunk<Flux<Lecture>, Flux<Lecture>>(1, transactionManager)
+        .reader(updateLecturesReader())
+        .writer(updateLecturesWriter())
+        .build()
+
+@StepScope
+@Bean
+fun updateLecturesReader(): ItemReader<Flux<Lecture>> =
+    UpdateLecturesReader(lectureClient)
+
+@StepScope
+@Bean
+fun updateLecturesWriter(): ItemWriter<Flux<Lecture>> =
+    UpdateLecturesWriter(lectureRepository)
+```
+
+앞서 정의한 `UpdateLecturesReader`와 `UpdateLecturesWriter`를 Bean으로 등록한 후 `Step`을 정의한다.
+
+<br/><br/>
+
+이때, `@JobScope`와 `@StepScope`는 해당 Bean의 생성 시점을 자신을 포함한 `Job`과 `Step`이 생성되는 시점으로 미루도록 해준다.
+사용하는 이유는 추후에 `JobParameter`를 Late Binding하기 위해 사용하거나 배치 작업을 병렬로 수행할때 각각의 작업들이 독립적으로 수행되도록 하기 위해 사용한다.
+
+## Job 구현
+
+```kotlin title="LectureBatchConfiguration.kt" showLineNumbers
+@Bean
+fun refreshLecturesJob(): Job =
+    JobBuilder("refreshLecturesJob", jobRepository)
+        .start(updateLecturesStep())
+        .build()
+```
+
+마지막으로 `UpdateLecturesStep`을 `Step`으로 가지는 `RefreshLecturesJob`을 Bean으로 등록한다.
+
+## Batch 실행
+
+```console
+2024-01-25 13:47:21.851 INFO [main] o.s.b.c.l.s.SimpleJobLauncher: Job: [SimpleJob: [name=refreshLecturesJob]] launched with the following parameters: [{}]
+2024-01-25 13:47:21.861 INFO [main] o.s.b.c.j.SimpleStepHandler: Executing step: [updateLecturesStep]
+2024-01-25 13:47:50.287 INFO [main] o.s.b.c.l.s.SimpleJobLauncher: Job: [SimpleJob: [name=refreshLecturesJob]] completed with the following parameters: [{}] and the following status: [COMPLETED] in 28s426ms
+```
+
+애플리케이션을 시작하면 내부적으로 `JobLauncherApplicationRunner`가 `JobLauncher`를 통해 우리가 구현한 `RefreshLecturesJob`을 실행하게 된다.
+
+## Batch Scheduling
+
+우리는 배치 작업을 애플리케이션 시작 시점이 아닌 특정 시점에 주기적으로 실행할 것이다.
+`@Scheduled`와 Cron 표현식을 사용하면 특정 시점에 주기적으로 메서드를 실행할 수 있다.
+
+```yaml title="application.yaml" showLineNumbers
+spring:
+  batch:
+    job:
+      enabled: false
+```
+
+우선 애플리케이션이 시작될 때 `JobLauncherApplicationRunner`에 의해 배치 작업이 실행되는 것을 비활성화 해준다.
+
+```kotlin title="BatchUtil.kt" showLineNumbers
+private fun createJobParameters(): JobParameters =
+    hashMapOf<String, JobParameter<*>>()
+        .apply {
+            put("time", JobParameter(Date().time, Long::class.java))
+        }
+        .let { JobParameters(it) }
+
+fun JobLauncher.run(job: Job): JobExecution = run(job, createJobParameters())
+```
+
+배치 작업은 `JobLauncher`의 `run()`를 통해 실행시킬 수 있다.
+`run()`는 `Job`과 `JobParameters`를 인자로 받는데, 내부적으로 `JobParameters`를 생성하는 부분을 위와 같이 추상화해서 사용했다.
+
+```kotlin title="LectureScheduler" showLineNumbers {6}
+@Component
+class LectureScheduler(
+    private val jobLauncher: JobLauncher,
+    private val lectureBatchConfiguration: LectureBatchConfiguration
+) {
+    @Scheduled(cron = "0 0 4 * * *")
+    fun refreshLectures() {
+        jobLauncher.run(lectureBatchConfiguration.refreshLecturesJob())
+    }
+}
+```
+
+다음으로 매일 새벽 4시마다 `RefreshLecturesJob`을 실행하는 `LectureScheduler`를 구현하면 배치 작업이 주기적으로 실행된다.
+
+## Spring Batch with Kotlin DSL
+
+나는 코드를 어느정도 개선하고 싶었다.
+우선 Chunk 기반 배치는 가져가면서 코드는 Tasklet 기반 배치처럼 하나의 클래스에 `read()`와 `write()`를 묶고 싶었고, Kotlin DSL을 통해 Spring Batch를 구현하고 싶었다.
+
+```kotlin title="BatchUtil.kt" showLineNumbers
+interface ItemTasklet<T> : ItemReader<T>, ItemWriter<T>
+```
+
+첫번째로 `ItemReader`와 `ItemWriter`를 하나의 믹스인(Mixin) 인터페이스인 `ItemTasklet`로 상속해주었다.
+
+```kotlin title="UpdateLecturesTasklet.kt" showLineNumbers
+@StepScope
+@Component
+class UpdateLecturesTasklet(
+    private val lectureRepository: LectureRepository,
+    private val lectureClient: LectureClient
+) : ItemTasklet<Flux<Lecture>> {
+    private val semesters = enumValues<Semester>()
+    private val years = (2020..Year.now().value).toList()
+    private val pairs = years.flatMap { year ->
+        semesters.map { semester ->
+            year to semester
+        }
+    }
+    private var idx = 0
+
+    override fun read(): Flux<Lecture>? =
+        pairs.getOrNull(idx++)
+            ?.let { (year, semester) -> lectureClient.getLecturesByYearAndSemester(year, semester) }
+
+    override fun write(chunk: Chunk<out Flux<Lecture>>) {
+        lectureRepository.saveAll(chunk.items.first())
+            .collectList()
+            .subscribeOn(Schedulers.boundedElastic())
+            .block()
+    }
+}
+```
+
+그리고 기존의 `UpdateLecturesReader`와 `UpdateLecturesWriter`를 하나의 `UpdateLecturesTasklet`으로 통합한다.
+우린 이제 이 `ItemTasklet`을 등록할 Kotlin DSL을 구현하면 된다.
+
+```kotlin title="BatchUtil.kt" showLineNumbers
+class JobDsl(
+    private val name: String,
+    private val repository: JobRepository,
+    private val transactionManager: PlatformTransactionManager
+) {
+    private val jobBuilder = JobBuilder(name, repository)
+    private val steps = mutableListOf<Step>()
+
+    fun <T> step(name: String, init: StepDsl<T>.() -> SimpleStepBuilder<T, T>) {
+        steps.add(
+            StepDsl<T>(name, repository, transactionManager)
+                .init()
+                .build()
+        )
+    }
+
+    fun build(): SimpleJobBuilder {
+        lateinit var simpleJobBuilder: SimpleJobBuilder
+
+        steps.mapIndexed { index, step ->
+            if (index == 0) {
+                simpleJobBuilder = jobBuilder.start(step)
+            } else {
+                simpleJobBuilder.next(step)
+            }
+        }
+
+        return simpleJobBuilder
+    }
+}
+```
+```kotlin title="BatchUtil.kt" showLineNumbers
+class StepDsl<T>(
+    private val name: String,
+    private val repository: JobRepository,
+    private val transactionManager: PlatformTransactionManager
+) {
+    private val stepBuilder = StepBuilder(name, repository)
+
+    fun chunk(count: Int, init: SimpleStepBuilder<T, T>.() -> SimpleStepBuilder<T, T>): SimpleStepBuilder<T, T> =
+        stepBuilder.chunk<T, T>(count, transactionManager)
+            .init()
+
+    fun SimpleStepBuilder<T, T>.tasklet(itemTasklet: ItemTasklet<T>): SimpleStepBuilder<T, T> =
+        reader(itemTasklet::read)
+            .writer(itemTasklet::write)
+}
+```
+
+우리가 사용할 최소한의 기능만을 포함한 `JobDsl`과 `StepDsl`을 구현했다.
+구현 방식은 다른 Kotlin DSL을 구현하는 방식과 같다.
+
+<br/><br/>
+
+```kotlin title="BatchUtil.kt" showLineNumbers /start/
+fun <T> step(name: String, init: StepDsl<T>.() -> SimpleStepBuilder<T, T>) {
+    jobBuilder.start(
+        StepDsl<T>(name, repository, transactionManager)
+            .init()
+            .build()
+    )
+}
+```
+
+특별히 주의할 점이라면 JobDsl에서 `step()`을 단순하게 `JobBuilder`의 `start()`로 `Step`을 추가하는 방식으로 구현하면 안된다는 것이다.
+그렇게 되면 만약 `Job`이 여러 `Step`으로 구성된다면 마지막으로 추가한 `Step`만 실행되게 된다.
+
+```kotlin title="BatchUtil.kt" showLineNumbers {9}
+fun job(
+    name: String,
+    repository: JobRepository,
+    transactionManager: PlatformTransactionManager,
+    init: JobDsl.() -> Unit
+): Job =
+    JobDsl(name, repository, transactionManager)
+        .apply(init)
+        .registerSteps()
+       .build()
+```
+
+그래서 나는 `step()`을 `MutableList<Step>`에 `Step`을 추가하는 방식으로 구현해 `registerSteps()`에서 모든 `Step`이 `start()`와 `next()`로 추가되도록 구현헀다.
+
+```kotlin title="LectureBatchConfiguration.kt" showLineNumbers
+@Configuration
+class LectureBatchConfiguration(
+    private val jobRepository: JobRepository,
+    private val transactionManager: PlatformTransactionManager,
+    private val updateLecturesTasklet: UpdateLecturesTasklet
+) {
+    @Bean
+    fun refreshLecturesJob(): Job =
+        job("refreshLecturesJob", jobRepository, transactionManager) {
+            step("updateLecturesStep") {
+                chunk(1) {
+                    tasklet(updateLecturesTasklet)
+                }
+            }
+        }
+}
+```
+
+구현한 Kotlin DSL을 기존 코드에 적용한 모습은 위와 같다.
