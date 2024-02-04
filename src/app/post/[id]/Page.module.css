@@ -51,6 +51,22 @@
   margin: calc(0.3vw + 1.8rem) 0
 }
 
+.loading {
+  width: calc(0.2vw + 3rem);
+  height: calc(0.2vw + 3rem);
+  border-radius: 50%;
+  border: 4px solid rgb(110, 110, 110);
+  border-top-color: transparent;
+  border-left-color: transparent;
+  animation: Spin 0.8s infinite linear;
+  z-index: 100;
+}
+
+@keyframes Spin {
+  from { transform: rotate(0deg) }
+  to { transform: rotate(360deg) }
+}
+
 .content code {
   font-family: 'Fira Code', sans-serif;
 }
