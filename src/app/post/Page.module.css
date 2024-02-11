@@ -8,5 +8,5 @@
 }
 
 .posts {
-  margin-top: calc(0.8vw + 1.5rem);
+  margin: calc(0.8vw + 1.5rem) 0 8rem;
 }

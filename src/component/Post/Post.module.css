@@ -1,5 +1,4 @@
 .container {
-  min-width: calc(16vw + 20rem);
   margin-bottom: calc(0.6vw + 1.4rem);
   transition: 0.3s;
 }

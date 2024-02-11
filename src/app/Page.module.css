@@ -10,13 +10,13 @@
 
 .introduction .header {
   font-weight: bold;
-  font-size: calc(0.2vw + 1.7rem);
+  font-size: calc(0.3vw + 1.7rem);
   letter-spacing: -0.1rem;
 }
 
 .description {
-  margin: calc(0.2vw + 0.4rem) 0;
-  font-size: calc(0.2vw + 0.8rem);
+  margin: calc(0.2vw + 0.3rem) 0;
+  font-size: calc(0.2vw + 0.9rem);
   font-weight: lighter;
   word-break: keep-all;
 }
@@ -29,7 +29,7 @@
 .link {
   padding: calc(0.1vw + 0.4rem);
   border-radius: 0.2rem;
-  font-size: calc(0.1vw + 0.7rem);
+  font-size: calc(0.1vw + 0.8rem);
   background-color: rgb(240, 240, 240);
   transition: 0.3s;
 }
@@ -45,12 +45,12 @@
 
 .activities > .header {
   margin-bottom: 0.6rem;
-  font-size: calc(0.2vw + 1.3rem);
+  font-size: calc(0.3vw + 1.3rem);
   font-weight: bold;
 }
 
 .activity {
-  margin-top: 0.2rem;
-  font-size: calc(0.1vw + 0.8rem);
+  margin-top: 0.3rem;
+  font-size: calc(0.2vw + 0.8rem);
   letter-spacing: -0.05rem;
 }
