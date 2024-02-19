@@ -1,6 +1,7 @@
 import MotionedDiv from '@/lib/motion'
 import styles from './Page.module.css'
 import Link from 'next/link'
+import Image from 'next/image'
 
 const linkVariants = {
   initial: { opacity: 0, filter: 'blur(0.5px)' },
@@ -29,12 +30,29 @@ const activityVariants = {
   }
 }
 
+const certificationVariants = {
+  initial: { opacity: 0, y: 10, filter: 'blur(0.5px)' },
+  animate: {
+    opacity: 1,
+    y: 0,
+    filter: 'blur(0px)',
+    transition: {
+      duration: 1,
+      staggerChildren: 0.5,
+      delayChildren: 4.5
+    }
+  }
+}
+
 const Page = () => {
   return (
     <div className={styles.container}>
       <Introduction />
       <Links />
-      <Activities />
+      <div className={styles.spec}>
+        <Activities />
+        <Certification />
+      </div>
     </div>
   )
 }
@@ -131,6 +149,36 @@ const Activities = () => {
         </MotionedDiv>
         <MotionedDiv className={styles.activity} variants={activityVariants}>
           - 삼육대학교 멋쟁이 사자처럼 10기 운영진
+        </MotionedDiv>
+      </MotionedDiv>
+    </div>
+  )
+}
+
+const Certification = () => {
+  return (
+    <div className={styles.certifications}>
+      <MotionedDiv
+        className={styles.header}
+        initial={{ opacity: 0, filter: 'blur(0.8px)' }}
+        animate={{
+          opacity: 1,
+          filter: 'blur(0px)',
+          transition: { duration: 2, delay: 4 }
+        }}
+      >
+        Certification
+      </MotionedDiv>
+      <MotionedDiv
+        variants={certificationVariants}
+        initial="initial"
+        animate="animate"
+      >
+        <MotionedDiv
+          className={styles.certification}
+          variants={certificationVariants}
+        >
+          - CKA(Certified Kubernetes Administrator)
         </MotionedDiv>
       </MotionedDiv>
     </div>

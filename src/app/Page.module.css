@@ -39,18 +39,29 @@
   background-color: rgb(220, 220, 220);
 }
 
-.activities {
-  margin-top: 3.4rem;
+.spec {
+  display: flex;
 }
 
-.activities > .header {
+.activities, .certifications {
+  margin-top: 3.4rem;
+  flex: 1;
+}
+
+.activities > .header, .certifications > .header{
   margin-bottom: 0.6rem;
   font-size: calc(0.3vw + 1.3rem);
   font-weight: bold;
 }
 
-.activity {
+.activity, .certification {
   margin-top: 0.3rem;
   font-size: calc(0.2vw + 0.8rem);
   letter-spacing: -0.05rem;
+}
+
+@media (max-width: 575px) {
+  .spec {
+    display: block;
+  }
 }
