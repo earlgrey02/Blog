@@ -13,8 +13,6 @@ tags: [Kubernetes, Certified Kubernetes Administrator]
 ETCD는 분산형 Key-Value 저장소이다.
 비슷한 Key-Value 저장소인 Redis처럼 조회 성능이 좋기 때문에 메타 데이터 등의 작은 크기의 데이터를 다루는데 적합하다.
 
-<br/><br/>
-
 ```console
 etcdctl set <key> <value>
 ```
@@ -26,8 +24,6 @@ ETCD는 함께 제공되는 CLI(Command Line Interface)인 `etcdctl`을 통해 �
 쿠버네티스에서 ETCD는 마스터 노드 내에 존재하며 클러스터 내의 `Node`, `Pod`, `Config`, `Secret`, `Role` 등에 대한 모든 정보들을 가지고 있다.
 쿠버네티스의 CLI인 `kubectl`로 가져오는 정보들은 모두 ETCD로 부터 가져오는 것들이다.
 클러스터 내의 모든 정보를 가지고 있기 때문에 ETCD의 데이터만 있다면 언제든지 클러스터를 복구할 수 있다.
-
-<br/><br/>
 
 ```console {5}
 > kubectl get pods -n kube-system
@@ -164,7 +160,7 @@ spec:
 
 마지막으로 ETCD의 Manifest 파일에서 기존에 마운트하고 있던 데이터 디렉토리를 복원한 데이터 디렉토리로 바꿔준다.
 이렇게 되면 ETCD가 복원된 데이터를 참조하게 된다.
-내부적으로 Kubectl이 ETCD의 변경 사항을 감지하고 클러스터 내의 상태를 변경한다.
+내부적으로 Kubelet이 ETCD의 변경 사항을 감지하고 클러스터 내의 상태를 변경한다.
 
 ```console
 > kubectl get all
@@ -190,3 +186,5 @@ replicaset.apps/red-6684f7669d    2         2         2       47m
 ```
 
 모든 Object를 조회하면 클러스터가 복구가 된 것을 볼 수 있다.
+
+## 
