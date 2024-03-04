@@ -24,9 +24,11 @@ const Image = ({ src, alt }: { src: string; alt: string }) => {
       <NextImage
         src={src}
         alt={alt}
-        layout="fill"
+        width={570}
+        height={850}
         objectFit="contain"
         onLoadingComplete={onLoadingCompleteHandler}
+        style={{ height: "auto", maxWidth: "100%"}}
       />
     </div>
   )

@@ -42,12 +42,9 @@
 }
 
 .image {
-  position: relative;
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: calc(5vw + 18rem);
-  max-height: calc(10vw + 20rem);
   margin: calc(0.3vw + 1.8rem) 0
 }
 
