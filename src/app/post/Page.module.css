@@ -8,5 +8,33 @@
 }
 
 .posts {
-  margin: calc(0.8vw + 1.5rem) 0 8rem;
+  margin-top: calc(0.8vw + 1.5rem);
+  min-height: calc(8vw + 30rem);
+}
+
+.paginator {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  gap: 0.8rem;
+  margin: 1rem 0 6rem;
+}
+
+.index {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: calc(0.6vw + 1.6rem);
+  height: calc(0.6vw + 1.6rem);
+  border-radius: 50%;
+  background-color: rgb(240, 240, 240);
+  font-size: calc(0.2vw + 0.6rem);
+  font-weight: lighter;
+  text-align: center;
+  transition: 0.5s;
+}
+
+.index:hover {
+  background-color: rgb(210, 210, 210);
+  cursor: pointer;
 }
