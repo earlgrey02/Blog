@@ -69,7 +69,7 @@ const Page = () => {
         key={page}
       >
         {pages[page].map((post) => (
-          <Post post={post} variants={variants} />
+          <Post post={post} variants={variants} key={post.id} />
         ))}
       </MotionedDiv>
       <div className={styles.paginator}>
@@ -82,6 +82,7 @@ const Page = () => {
                 : {}
             }
             onClick={() => setPage(index)}
+            key={index}
           >
             {index + 1}
           </div>
