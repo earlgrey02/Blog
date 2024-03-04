@@ -1,8 +1,11 @@
+'use client'
 import { allPosts } from 'contentlayer/generated'
 import styles from './Page.module.css'
 import { compareDesc } from 'date-fns'
-import Post, { variants } from '@/component/Post/Post'
+import Post from '@/component/Post/Post'
 import MotionedDiv from '@/lib/motion'
+import { useEffect, useMemo, useState } from 'react'
+import { Variants } from 'framer-motion'
 
 const Page = () => {
   const [page, setPage] = useState(0)
@@ -63,9 +66,10 @@ const Page = () => {
         variants={variants}
         initial="initial"
         animate="animate"
+        key={page}
       >
-        {posts.map((post) => (
-          <Post post={post} key={post.id} />
+        {pages[page].map((post) => (
+          <Post post={post} variants={variants} />
         ))}
       </MotionedDiv>
       <div className={styles.paginator}>

@@ -3,24 +3,16 @@ import { Post } from 'contentlayer/generated'
 import { useRouter } from 'next/navigation'
 import styles from './Post.module.css'
 import MotionedDiv from '@/lib/motion'
+import { Variants } from 'framer-motion'
 
-const variants = {
-  initial: { opacity: 0, y: 10, filter: 'blur(0.5px)' },
-  animate: {
-    opacity: 1,
-    y: 0,
-    filter: 'blur(0px)',
-    transition: { duration: 1, staggerChildren: 0.5, delayChildren: 0.5 }
-  }
-}
-
-const Post = ({ post }: { post: Post }) => {
+const Post = ({ post, variants }: { post: Post; variants: Variants }) => {
   const router = useRouter()
 
   return (
     <div
       className={styles.container}
       onClick={() => router.push(`/post/${post.id}`)}
+      key={post.id}
     >
       <MotionedDiv className={styles.information} variants={variants}>
         <div className={styles.title}>{post.title}</div>
@@ -38,5 +30,4 @@ const Post = ({ post }: { post: Post }) => {
   )
 }
 
-export { variants }
 export default Post
