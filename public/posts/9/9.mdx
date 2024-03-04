@@ -178,19 +178,17 @@ Build Trigger로 GitHub Hook Trigger를 선택한다.
 
 ## Jib 설정
 
-이전에 SW 마에스트로(이하 소마)에서 GitOps를 구축할때는 이미지 빌드 및 배포에 Root 권한 없이 이미지를 빌드할 수 있는 Kaniko를 사용했었다.
+이전에 SW 마에스트로에서 GitOps를 구축할때는 이미지 빌드 및 배포에 Root 권한 없이 이미지를 빌드할 수 있는 Kaniko를 사용했었다.
 하지만 이번에는 좀 더 간단하게 Jib를 통해서 Docker나 Kaniko 없이 이미지를 빌드해서 컨테이너 레지스트리에 배포하는 방식을 사용할 것이다.
 Jib를 사용하기 위해 간단한 Jib 설정이 필요하다.
 
 ```kotlin title="build.gradle.kts"
 plugins {
-    ...
     id("com.google.cloud.tools.jib") version "3.3.1"
 }
 
 subprojects {
     apply {
-        ...
         plugin("com.google.cloud.tools.jib")
     }
 }
