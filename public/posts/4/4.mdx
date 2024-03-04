@@ -2,7 +2,7 @@
 title: 클러스터의 백업과 복구
 description: 쿠버네티스에서 ETCD를 통해 클러스터를 백업하고 복구하는 방법
 date: 2024-02-03
-tags: [Kubernetes, Certified Kubernetes Administrator]
+tags: [Kubernetes, ETCD]
 ---
 이번 글은 쿠버네티스에서 ETCD를 통해 클러스터 환경을 백업하고 복구하는 방법에 대한 글이다.
 
@@ -37,7 +37,7 @@ kube-proxy-crxgd                       1/1     Running   0          12m
 kube-scheduler-controlplane            1/1     Running   0          12m
 ```
 
-Kubeadm 기반 클러스터에서 ETCD는 `kube-system` 네임스페이스에 속한 Static Pod로 배포되어 있으므로 `/etc/kubernetes/manifests`에 있는 `etcd.yaml`로 ETCD에 대한 정보를 볼 수 있다.
+Kubeadm 기반 클러스터에서 ETCD는 `kube-system` 네임스페이스에 Static Pod로 배포되어 있으므로 `/etc/kubernetes/manifests`에 있는 `etcd.yaml`로 ETCD에 대한 정보를 볼 수 있다.
 
 ```yaml title="etcd.yaml" showLineNumbers {12, 14, 19, 20, 29}
 apiVersion: v1
@@ -186,5 +186,3 @@ replicaset.apps/red-6684f7669d    2         2         2       47m
 ```
 
 모든 Object를 조회하면 클러스터가 복구가 된 것을 볼 수 있다.
-
-## 
