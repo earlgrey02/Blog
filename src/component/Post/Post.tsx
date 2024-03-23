@@ -1,5 +1,5 @@
 'use client'
-import { Post } from 'contentlayer/generated'
+import type { Post } from 'contentlayer/generated'
 import { useRouter } from 'next/navigation'
 import styles from './Post.module.css'
 import MotionedDiv from '@/lib/motion'
@@ -11,14 +11,12 @@ const Post = ({ post, variants }: { post: Post; variants: Variants }) => {
   return (
     <div
       className={styles.container}
-      onClick={() => router.push(`/post/${post.id}`)}
-      key={post.id}
-    >
+      onClick={() => router.push(`/post/${post.id}`)}>
       <MotionedDiv className={styles.information} variants={variants}>
         <div className={styles.title}>{post.title}</div>
         <div className={styles.description}>{post.description}</div>
         <div className={styles.tags}>
-          {post.tags.map((tag) => (
+          {post.tags.map(tag => (
             <div className={styles.tag} key={tag}>
               {tag}
             </div>

@@ -9,10 +9,10 @@ import Footer from '@/component/Footer/Footer'
 
 const metadata: Metadata = {
   title: 'earlgrey02의 블로그',
-  description: 'DevOps에 대해 공부하는 earlgrey02의 기술 블로그입니다.',
+  description: 'earlgrey02의 기술 블로그입니다.',
   openGraph: {
     title: 'earlgrey02의 기술 블로그',
-    description: 'DevOps에 대해 공부하는 earlgrey02의 기술 블로그입니다.',
+    description: 'earlgrey02의 기술 블로그입니다.',
     url: 'https://earlgrey02.com',
     type: 'website'
   }

@@ -24,7 +24,7 @@ const Page = () => {
           pages[page].push(post)
 
           return pages
-        }, [] as any[][]),
+        }, [] as Post[][]),
     []
   )
   const variants: Variants = useMemo(
@@ -57,8 +57,7 @@ const Page = () => {
           opacity: 1,
           filter: 'blur(0px)',
           transition: { duration: 3 }
-        }}
-      >
+        }}>
         Post
       </MotionedDiv>
       <MotionedDiv
@@ -66,9 +65,8 @@ const Page = () => {
         variants={variants}
         initial="initial"
         animate="animate"
-        key={page}
-      >
-        {pages[page].map((post) => (
+        key={page}>
+        {pages[page].map(post => (
           <Post post={post} variants={variants} key={post.id} />
         ))}
       </MotionedDiv>
@@ -82,8 +80,7 @@ const Page = () => {
                 : {}
             }
             onClick={() => setPage(index)}
-            key={index}
-          >
+            key={index}>
             {index + 1}
           </div>
         ))}

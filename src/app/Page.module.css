@@ -2,31 +2,12 @@
   padding-top: 4rem;
 }
 
-.introduction {
-  display: flex;
-  flex-direction: column;
-  border-radius: 2rem;
-}
-
-.introduction .header {
-  font-weight: bold;
-  font-size: calc(0.3vw + 1.7rem);
-  letter-spacing: -0.1rem;
-}
-
-.description {
-  margin: calc(0.2vw + 0.3rem) 0;
-  font-size: calc(0.2vw + 0.9rem);
-  font-weight: lighter;
-  word-break: keep-all;
-}
-
-.links {
+.contacts {
   display: flex;
   gap: calc(0.1vw + 0.4rem);
 }
 
-.link {
+.contact {
   padding: calc(0.1vw + 0.4rem);
   border-radius: 0.2rem;
   font-size: calc(0.1vw + 0.8rem);
@@ -48,7 +29,7 @@
   flex: 1;
 }
 
-.activities > .header, .certifications > .header{
+.title {
   margin-bottom: 0.6rem;
   font-size: calc(0.3vw + 1.3rem);
   font-weight: bold;

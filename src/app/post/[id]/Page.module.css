@@ -31,7 +31,7 @@
 
 .content {
   padding-bottom: calc(1vw + 6rem);
-  font-size: calc(0.2vw + 0.8rem);
+  font-size: calc(0.15vw + 0.8rem);
   color: rgb(60, 60, 60);
   line-height: 2;
 }
@@ -42,6 +42,7 @@
 }
 
 .image {
+  position: relative;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -49,6 +50,7 @@
 }
 
 .loading {
+  position: absolute;
   width: calc(0.2vw + 2rem);
   height: calc(0.2vw + 2rem);
   border-radius: 50%;
