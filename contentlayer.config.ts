@@ -28,11 +28,11 @@ const Post = defineDocumentType(() => ({
   computedFields: {
     url: {
       type: 'string',
-      resolve: (post) => `/posts/${post._raw.flattenedPath}`
+      resolve: post => `/posts/${post._raw.flattenedPath}`
     },
     id: {
       type: 'number',
-      resolve: (doc) => Number(doc._raw.sourceFileName.replace('.mdx', ''))
+      resolve: doc => Number(doc._raw.sourceFileName.replace('.mdx', ''))
     }
   }
 }))

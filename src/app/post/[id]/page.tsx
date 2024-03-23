@@ -27,7 +27,7 @@ const Page = ({ params }: { params: { id: number } }) => {
 }
 
 const generateStaticParams = async () =>
-  allPosts.map((post) => ({ id: post.id.toString() }))
+  allPosts.map(post => ({ id: post.id.toString() }))
 
 const generateMetadata = async ({
   params

@@ -18,6 +18,7 @@ const Image = ({ src, alt }: { src: string; alt: string }) => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
+          transition={{ duration: 0.5 }}
           key="spinner"
         />
       )}
@@ -28,7 +29,7 @@ const Image = ({ src, alt }: { src: string; alt: string }) => {
         height={850}
         objectFit="contain"
         onLoadingComplete={onLoadingCompleteHandler}
-        style={{ height: "auto", maxWidth: "100%"}}
+        style={{ height: 'auto', maxWidth: '100%' }}
       />
     </div>
   )
