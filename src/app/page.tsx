@@ -103,7 +103,7 @@ const Page = () => {
               filter: 'blur(0px)',
               transition: { duration: 2, delay: 4 }
             }}>
-            Certification
+            Certifications
           </MotionedDiv>
           <MotionedDiv
             variants={certificationVariants}
