@@ -5,7 +5,12 @@ import styles from './Post.module.css'
 import MotionedDiv from '@/lib/motion'
 import { Variants } from 'framer-motion'
 
-const Post = ({ post, variants }: { post: Post; variants: Variants }) => {
+interface Props {
+  post: Post;
+  variants: Variants
+}
+
+const Post = ({ post, variants }: Props) => {
   const router = useRouter()
 
   return (

@@ -56,7 +56,7 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  margin: calc(0.3vw + 1.8rem) 0
+  margin: calc(0.3vw + 1.8rem) 0;
 }
 
 .loading {
@@ -72,8 +72,12 @@
 }
 
 @keyframes Spin {
-  from { transform: rotate(0deg) }
-  to { transform: rotate(360deg) }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .content code {

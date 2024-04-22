@@ -7,6 +7,10 @@ import Head from './head'
 import Header from '@/component/Header/Header'
 import Footer from '@/component/Footer/Footer'
 
+interface Props {
+  children: ReactNode
+}
+
 const metadata: Metadata = {
   title: 'earlgrey02의 블로그',
   description: 'earlgrey02의 기술 블로그입니다.',
@@ -18,7 +22,7 @@ const metadata: Metadata = {
   }
 }
 
-const Layout = ({ children }: { children: ReactNode }) => {
+const Layout = ({ children }: Props) => {
   return (
     <html>
       <Head />
