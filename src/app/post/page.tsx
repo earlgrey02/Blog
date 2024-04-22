@@ -14,17 +14,17 @@ const Page = () => {
   const pages = useMemo(
     () =>
       allPosts
-        .sort((post1, post2) =>
-          compareDesc(new Date(post1.date), new Date(post2.date))
-        )
-        .reduce((pages, post, index) => {
-          const page = Math.floor(index / 4)
+      .sort((post1, post2) =>
+        compareDesc(new Date(post1.date), new Date(post2.date))
+      )
+      .reduce((pages, post, index) => {
+        const page = Math.floor(index / 4)
 
-          if (!pages[page]) pages[page] = []
-          pages[page].push(post)
+        if (!pages[page]) pages[page] = []
+        pages[page].push(post)
 
-          return pages
-        }, [] as Post[][]),
+        return pages
+      }, [] as Post[][]),
     []
   )
   const variants: Variants = useMemo(
@@ -63,8 +63,8 @@ const Page = () => {
       <MotionedDiv
         className={styles.posts}
         variants={variants}
-        initial="initial"
-        animate="animate"
+        initial='initial'
+        animate='animate'
         key={page}>
         {pages[page].map(post => (
           <Post post={post} variants={variants} key={post.id} />

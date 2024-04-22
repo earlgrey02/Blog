@@ -6,7 +6,11 @@ import styles from './Page.module.css'
 import { getPostById } from '@/modules/post/api'
 import { Metadata } from 'next'
 
-const Page = ({ params }: { params: { id: number } }) => {
+interface Props {
+  params: { id: number }
+}
+
+const Page = ({ params }: Props) => {
   const post = getPostById(params.id)
   if (!post) notFound()
 
@@ -29,11 +33,7 @@ const Page = ({ params }: { params: { id: number } }) => {
 const generateStaticParams = async () =>
   allPosts.map(post => ({ id: post.id.toString() }))
 
-const generateMetadata = async ({
-  params
-}: {
-  params: { id: number }
-}): Promise<Metadata> => {
+const generateMetadata = async ({ params }: Props): Promise<Metadata> => {
   const post = getPostById(params.id)
   if (!post) notFound()
 

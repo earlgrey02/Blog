@@ -2,12 +2,12 @@
 import { motion, MotionProps } from 'framer-motion'
 import { ReactNode } from 'react'
 
-type MotionedProps = {
+interface Props {
   children?: ReactNode
   className?: string
-} & MotionProps
+}
 
-const MotionedDiv = ({ children, ...props }: MotionedProps) => (
+const MotionedDiv = ({ children, ...props }: Props & MotionProps) => (
   <motion.div {...props}>{children}</motion.div>
 )
 

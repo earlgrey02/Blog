@@ -4,7 +4,12 @@ import styles from '@/app/post/[id]/Page.module.css'
 import { useCallback, useState } from 'react'
 import MotionedDiv from './motion'
 
-const Image = ({ src, alt }: { src: string; alt: string }) => {
+interface Props {
+  src: string;
+  alt: string
+}
+
+const Image = ({ src, alt }: Props) => {
   const [isLoading, setIsLoading] = useState(true)
   const onLoadingCompleteHandler = useCallback(() => {
     setIsLoading(false)
@@ -19,7 +24,7 @@ const Image = ({ src, alt }: { src: string; alt: string }) => {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.5 }}
-          key="spinner"
+          key='spinner'
         />
       )}
       <NextImage
@@ -27,7 +32,7 @@ const Image = ({ src, alt }: { src: string; alt: string }) => {
         alt={alt}
         width={570}
         height={850}
-        objectFit="contain"
+        objectFit='contain'
         onLoadingComplete={onLoadingCompleteHandler}
         style={{ height: 'auto', maxWidth: '100%' }}
       />
