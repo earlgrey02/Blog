@@ -55,14 +55,14 @@ const Page = () => {
       <MotionedDiv
         className={styles.contacts}
         variants={contactVariants}
-        initial='initial'
-        animate='animate'>
+        initial="initial"
+        animate="animate">
         {profile.contacts.map(contact => (
           <MotionedDiv
             className={styles.contact}
             variants={contactVariants}
             key={contact.id}>
-            <Link href={contact.link} target='_blank'>
+            <Link href={contact.link} target="_blank">
               {contact.name}
             </Link>
           </MotionedDiv>
@@ -78,12 +78,12 @@ const Page = () => {
               filter: 'blur(0px)',
               transition: { duration: 2, delay: 2.5 }
             }}>
-            Activities
+            Activity
           </MotionedDiv>
           <MotionedDiv
             variants={activityVariants}
-            initial='initial'
-            animate='animate'>
+            initial="initial"
+            animate="animate">
             {profile.activities.map(activity => (
               <MotionedDiv
                 className={styles.activity}
@@ -103,12 +103,12 @@ const Page = () => {
               filter: 'blur(0px)',
               transition: { duration: 2, delay: 4 }
             }}>
-            Certifications
+            Certification
           </MotionedDiv>
           <MotionedDiv
             variants={certificationVariants}
-            initial='initial'
-            animate='animate'>
+            initial="initial"
+            animate="animate">
             {profile.certifications.map(certification => (
               <MotionedDiv
                 className={styles.certification}
