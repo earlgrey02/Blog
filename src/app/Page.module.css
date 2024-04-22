@@ -10,14 +10,14 @@
 .contact {
   padding: calc(0.1vw + 0.4rem);
   border-radius: 0.2rem;
-  font-size: calc(0.1vw + 0.8rem);
+  font-size: calc(0.1vw + 0.7rem);
   background-color: rgb(240, 240, 240);
   transition: 0.3s;
 }
 
-.link:hover {
+.contact:hover {
   cursor: pointer;
-  background-color: rgb(220, 220, 220);
+  background-color: rgb(230, 230, 230);
 }
 
 .spec {

@@ -3,7 +3,7 @@
 }
 
 .title {
-  font-size: 2rem;
+  font-size: calc(0.6vw + 1.5rem);
   font-weight: 900;
 }
 
@@ -14,9 +14,8 @@
 
 .paginator {
   display: flex;
-  flex-direction: row;
   justify-content: center;
-  gap: 0.8rem;
+  align-items: center;
   margin: 1rem 0 6rem;
 }
 
