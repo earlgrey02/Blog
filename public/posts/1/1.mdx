@@ -8,7 +8,7 @@ tags: [Kotlin, Spring, Spring WebFlux]
 여기서 저는 서비스에서 발생하는 HTTP 요청 및 응답을 모니터링 하기 위해 로깅을 설정하고 싶었습니다.
 그래서 Spring WebFlux 환경에서 수동으로 로깅 및 로그 추적을 구현한 경험을 공유해 드리려고 합니다.
 
-## 프로퍼티 설정을 통한 로깅
+# 프로퍼티 설정을 통한 로깅
 
 ```yaml title="application.yml" showLineNumbers
 logging:
@@ -27,7 +27,7 @@ logging:
 또한 일반적으로 프로덕션 환경에서는 Info 레벨까지 로깅을 수행하는 것이 원칙입니다.
 이러한 이유들로 인해 자체적으로 로깅을 구현하기로 결정했습니다.
 
-## Spring AOP
+# Spring AOP
 
 보통 Spring에서 로깅을 자체적으로 구현한다면 AOP(Aspect Oriented Programming)를 사용하는 예시가 가장 대표적입니다.
 Spring에서는 AOP를 지원하는 Spring AOP를 사용할 수 있습니다.
@@ -208,7 +208,7 @@ class DefaultServerRequestBuilder implements ServerRequest.Builder {
 마침 기존의 `ServerRequest`에서 Request Body를 수정하는 `DefaultServerRequestBuilder`가 있었습니다.
 새로운 Request Body는 위와 같이 String 타입의 JSON 문자열 형태로 받을 수 있습니다.
 
-<br/><br/>
+<br /><br />
 
 수정한 코드는 다음과 같습니다.
 
@@ -263,7 +263,7 @@ class LoggingAspect {
 
 하지만 예외가 발생할 때, 상태 코드가 반영되지 못하는 문제가 발생했습니다.
 
-## 예외 처리
+# 예외 처리
 
 ```kotlin title="PostHandler.kt" showLineNumbers {6}
 @Handler
@@ -484,7 +484,7 @@ public interface ReactiveHttpOutputMessage extends HttpMessage {
 
 이전과 달리 `GlobalExceptionHandler`에 의해 변환된 응답도 로그에 반영된 것을 볼 수 있습니다.
 
-## 로그 추적
+# 로그 추적
 
 ```console
 2024-04-04 17:36:29.568 INFO [reactor-http-nio-3] c.d.c.l.LoggingFilter: HTTP POST /auth/login {"studentId":"2021101015", "password":"rooot"}
@@ -498,11 +498,11 @@ public interface ReactiveHttpOutputMessage extends HttpMessage {
 많은 로그가 뒤섞이면서 어떤 요청과 응답이 하나의 HTTP 통신인지 알기 어렵다는 것입니다.
 그래서 로그를 추적하기 쉽게 요청마다 임의의 식별자를 부여해주는 것을 생각했습니다.
 
-<br/><br/>
+<br /><br />
 
 이렇게 식별자를 이용한 로그 추적에 사용되는 것 중에서는 MDC(Mapped Diagnostic Context)가 있습니다.
 
-## MDC
+# MDC
 
 MDC(Mapped Diagnostic Context)는 스레드를 통해 특정 메타 정보를 저장하는 공간입니다.
 스레드 내부의 `Map`을 통해 값을 관리하는데, 이 과정에서 `ThreadLocal`을 사용합니다.
@@ -515,7 +515,7 @@ Slf4j 구현체들은 기본적으로 MDC를 사용할 수 있도록 구현되�
 Spring WebFlux에서는 하나의 리액티브 시퀀스(Reactive Sequence)가 여러 스레드에서 수행될 수 있습니다.
 이로 인해 `ThreadLocal`을 사용하기 어려우므로 MDC를 통한 로그 추적도 어렵습니다.
 
-<br/><br/>
+<br /><br />
 
 그래서 하나의 리액티브 시퀀스에서 공유되는 저장 공간인 Reactor Context를 활용하기로 했습니다.
 
@@ -605,7 +605,7 @@ class MdcConfiguration {
 
 이전 로그들과 달리 식별자가 앞에 붙어 로그 추적이 쉬워진 것을 볼 수 있습니다.
 
-## 마치며
+# 마치며
 
 지금까지 Spring WebFlux와 같은 멀티 스레드 환경에서 로깅을 구현한 경험을 공유해보았습니다.
 이렇게 자체적인 로깅을 구현하면 Info 레벨에서의 웹 계층 로깅을 구현할 수도 있고 특정 요청(Health Check 등)들은 로깅하지 않도록 설정할 수도 있어서 좋다고 생각합니다.

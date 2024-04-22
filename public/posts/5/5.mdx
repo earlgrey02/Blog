@@ -7,7 +7,7 @@ tags: [TypeScript, React Native, React Query]
 이번에 사이드 프로젝트에서 React Native로 앱을 개발하면서 무한 스크롤을 구현 할 일이 생겼었습니다.
 그래서 React Query와 `FlatList`를 통해 무한 스크롤을 구현해본 경험을 공유해 드리려고 합니다.
 
-## Infinite Scroll
+# Infinite Scroll
 
 ![](1.gif)
 
@@ -15,7 +15,7 @@ tags: [TypeScript, React Native, React Query]
 일반적으로 보여줄 데이터의 끝을 예상할 수 없을 때 사용합니다.
 무한 스크롤을 구현하기 위해서는 데이터를 가져올 API에서 페이지네이션(Pagination)을 지원할 수 있어야 합니다.
 
-## 무한 스크롤의 원리
+# 무한 스크롤의 원리
 
 무한 스크롤은 단순히 리스트의 끝에 도달 시 다음 페이지의 데이터를 가져와 렌더링하는 방식으로 구현합니다.
 이런 간단한 원리와 달리, React에서 무한 스크롤은 구현 방식이 생각보다 복잡합니다.
@@ -76,7 +76,7 @@ const LecureScreen = () => {
 위 방식으로 무한 스크롤을 구현하게 되면 수동으로 페이지 인덱스나 `lectures`나 `index` 등의 상태 변수들을 관리해야 합니다.
 이렇게 Fetching과 상태 변경이 반복적으로 발생하는 상황에서 유용하게 사용할 수 있는 것으로 React Query가 있습니다.
 
-## React Query
+# React Query
 
 React Query는 React에서 서버로부터 상태를 불러오고 캐싱(Caching)하며, 지속적으로 동기화하고 업데이트하는 작업을 도와주는 라이브러리입니다.
 다른 Fetching 방식과 달리 보일러 플레이트(Boiler Plate)를 추상화해 간결한 코드를 지원합니다.
@@ -154,7 +154,7 @@ API에서 페이지네이션으로 제공하는 데이터의 페이지가 0부�
 이걸 반복하다 n + 1번째 Fetching을 하고 나서 `getNextPageParam()`가 호출되면 `null`을 반환하고 `null`이 다음 `pageParam`이 됩니다.
 최종적으로 마지막에 `pageParam`이 null이 되면 Fetching이 종료되며 `hasNextPage`가 `false`가 됩니다.
 
-## FlatList with ReactQuery
+# FlatList with ReactQuery
 
 이제 기존의 `FlatList`에 사용하던 상태 변수들을 `useInfiniteQuery()`의 반환 값들로 대체하면 됩니다.
 
@@ -193,7 +193,7 @@ const LecureScreen = () => {
 
 이제 스크롤을 내릴 때마다 데이터를 계속해서 가져오는 것을 볼 수 있습니다.
 
-## 마치며
+# 마치며
 
 지금까지 React Native에서 React Query와 `FlatList`를 통해 무한 스크롤을 구현한 경험을 공유해보았습니다.
 깊게까지는 아니어도 React Query에 대해 어느정도 알게 된 계기여서 좋았던 것 같습니다.

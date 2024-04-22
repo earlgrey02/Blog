@@ -7,7 +7,7 @@ tags: [Kubernetes, ETCD]
 이번에 사이드 프로젝트에서 Kubernetes 환경에서 개발하면서 클러스터를 백업해야 하는 일을 겪었습니다.
 그래서 ETCD를 통해 클러스터를 백업하고 복구까지 해본 경험을 공유해 드리려고 합니다.
 
-## ETCD
+# ETCD
 
 ![ETCD](1.svg)
 
@@ -81,7 +81,7 @@ spec:
 매니페스트(Manifest)의 내용을 보면 ETCD 내의 데이터가 저장되는 디렉토리와 ETCD의 엔드포인트, ETCD가 독립적으로 인증 기관(Certificate Authority)을 가지고 있다는 사실들을 알 수 있습니다.
 위 정보들을 이용해 ETCD 내의 데이터를 가져와 스냅샷(Snapshot)으로 저장할 수 있습니다.
 
-## 클러스터 백업
+# 클러스터 백업
 
 
 ```console
@@ -114,7 +114,7 @@ cni  containerd  snapshot.db
 
 명령을 실행하면 `/opt/snapshot.db`가 생성된 것을 볼 수 있습니다.
 
-## 클러스터 복구
+# 클러스터 복구
 
 ```console
 > kubectl get all
@@ -186,7 +186,7 @@ replicaset.apps/red-6684f7669d    2         2         2       47m
 
 모든 오브젝트를 조회하면 클러스터가 복구가 된 것을 볼 수 있습니다.
 
-## 마치며
+# 마치며
 
 지금까지 Kubernetes 환경에서 ETCD를 통해 클러스터를 백업하고 복구한 경험을 공유해 보았습니다.
 AWS EKS(Elastic Kubernetes Service) 등의 Managed Kubernetes는 ETCD가 AWS가 자체적으로 관리하는 마스터 노드 내에 존재해서 직접 백업을 해본 경험이 없었습니다.

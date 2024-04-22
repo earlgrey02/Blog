@@ -7,7 +7,7 @@ tags: [Kotlin, Spring]
 이번 SW 마에스트로 프로젝트에서 백엔드를 개발하면서 테스트 코드를 작성하는데 Kotest를 사용하기로 했습니다.
 그래서 Kotest와 Mockk를 함께 사용해 Kotlin DSL로 테스트 코드를 작성한 경험을 공유해 드리려고 합니다.
 
-## Kotlin DSL
+# DSL
 
 DSL(Domain Specific Languages)은 특정 도메인에 국한된 언어입니다.
 DSL을 사용하면 코드의 내부 구현을 숨겨 가독성을 좋게 만들 수 있습니다.
@@ -34,7 +34,6 @@ Given("챕터와 각각의 챕터에 속하는 퀴즈들이 존재하는 경우"
 ```
 
 DSL은 마치 자연어와 프로그래밍 언어 사이에 있는 느낌을 줍니다.
-위 코드는 Kotlin으로 구현할 수 있는 Kotlin DSL을 통해 Given-When-Then 패턴을 적용한 테스트 코드입니다.
 Kotlin은 DSL을 구현할 수 있는 여러 기능들을 내포하고 있습니다.
 일반적으로 람다 표현식, 확장 함수, 중위 함수 등의 기능들로 Kotlin DSL을 구현합니다.
 
@@ -44,7 +43,7 @@ Kotlin은 DSL을 구현할 수 있는 여러 기능들을 내포하고 있습니
 `@Nested`와 함께 많은 내부 클래스로 중첩 테스트 구조를 나타내다 보니 코드가 복잡해지기 쉬웠습니다.
 마침 저희는 Kotlin을 사용하고 있었고 앞서 소개해드린 Kotlin DSL로 다양한 테스트 코드를 작성하도록 도와주는 Kotest와 Mockk를 사용하게 되었습니다.
 
-## Kotest & Mockk
+# Kotest & Mockk
 
 Kotest는 Kotlin을 사용하는 테스트 프레임워크입니다.
 Kotest에서는 단순히 `@Test`나 `@Nested`를 사용해서 테스트 코드를 작성하는 것 외에 Given-When-Then 구조의 BDD(Behavior Driven Design) 또는 DCI(Describe-Context-It) 패턴을 Kotlin DSL로 사용할 수 있습니다.
@@ -267,7 +266,7 @@ class BehaviorSpecGivenContainerScope(
 
 참고로 Kotest는 Coroutine 기반으로 작동하므로 추가적인 Couroutine 빌더 없이 Coroutine 확장 함수를 사용할 수 있습니다.
 
-## 마치며
+# 마치며
 
 지금까지 Kotest와 Mockk를 통해 Kotlin 스타일의 테스트 코드를 작성한 경험을 공유해보았습니다.
 Kotest는 앞서 설명드린 BDD, DCI 패턴 외에도 기존의 어노테이션 방식의 테스트도 지원합니다.

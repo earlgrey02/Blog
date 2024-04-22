@@ -8,7 +8,7 @@ tags: [Kubernetes, DevOps, Jenkins]
 그 중 CI 파이프라인을 구축하는데 Jenkins를 사용하기로 했었습니다.
 여기서 제가 GitOps 기반으로 Jenkins CI 파이프라인을 구축한 경험을 공유해 드리려고 합니다.
 
-## Jenkins 설치
+# Jenkins 설치
 
 우선 Jenkins를 클러스터 내에 구동해야 했습니다.
 이때 사용하는 방법으로는 Helm을 사용하기로 했습니다.
@@ -149,7 +149,7 @@ kubectl exec --namespace default -it svc/jenkins -c jenkins -- /bin/cat /run/sec
 
 사용자 이름은 기본적으로 `admin`이고 패스워드는 위 커맨드를 통해 확인할 수 있습니다.
 
-## Credential 설정
+# Credential 설정
 
 Jenkins에서는 GitHub나 Docker에 접근해야하는 경우가 있는데, 이때 사용하는 자격 증명이 필요하므로 따로 설정을 해줘야 합니다.
 
@@ -161,14 +161,14 @@ Jenkins에서는 GitHub나 Docker에 접근해야하는 경우가 있는데, 이
 
 같은 방식으로 GitHub와 Docker 모두 Credential을 생성해줍니다.
 
-## GitHub Plugin 설치
+# GitHub 플러그인 설치
 
 ![](4.png)
 
 CI 파이프라인은 GitHub Repository에 커밋이 발생한 이후에 수행되도록 할 것이므로 WebHook이 필요합니다.
-그래서 사용할 GitHub Webhook과 괸련된 Plugin들을 설치합니다.
+그래서 사용할 GitHub Webhook과 괸련된 플러그인들을 설치합니다.
 
-## Job 생성
+# Job 생성
 
 이제 Jenkins의 Job을 구성할 차례입니다.
 
@@ -182,7 +182,7 @@ CI 파이프라인은 GitHub Repository에 커밋이 발생한 이후에 수행�
 이렇게 되면 Pipeline Script로 Repository 내부에 있는 `Jenkinsfile`을 사용하게 됩니다.
 Job에서 수행되는 파이프라인은 Repository 내의 `Jenkinsfile`에 정의하면 됩니다.
 
-## Jib 설정
+# Jib 설정
 
 이전에 SW 마에스트로에서 GitOps를 구축할 때는 이미지 빌드 및 배포를 Root 권한 없이 할 수 있는 Kaniko를 사용했었습니다.
 하지만 이번에는 좀 더 간단하게 Jib를 통해서 Docker나 Kaniko 등의 도구 없이 이미지를 빌드해서 컨테이너 레지스트리에 배포하는 방식을 사용해보겠습니다.
@@ -200,7 +200,7 @@ subprojects {
 }
 ```
 
-위와 같이 Jib Plugin을 배포할 모든 하위 모듈들에 적용했습니다.
+위와 같이 Jib 플러그인을 배포할 모든 하위 모듈들에 적용했습니다.
 
 ```kotlin title="build.gradle.kts"
 tasks {
@@ -224,7 +224,7 @@ Jib를 통해 이미지를 빌드하고 컨테이너 레지스트리(DockerHub)�
 
 이렇게 Jib는 커맨드 한 줄로 이미지 빌드부터 배포까지 빠르게 수행할 수 있다는 장점이 있습니다.
 
-## Helm 차트 생성
+# Helm 차트 생성
 
 Jenkins가 새로운 이미지를 배포한 후에 클러스터에 변경 사항을 반영해야 합니다.
 해당 프로젝트에서는 CD 도구로 ArgoCD를 사용할 것이므로 Jenkins가 이미지 태그를 수정할 Helm 차트가 있어야 합니다.
@@ -328,7 +328,7 @@ ingress:
 이런 식으로 차트를 구성하면 이미지가 변경될 때 간단하게 `values.yaml`에 있는 이미지 태그들만 변경하면 됩니다.
 이후에 차트를 기반으로 서비스를 배포하는 것은 ArgoCD의 몫입니다.
 
-## Pipeline Script
+# 파이프라인
 
 이제 모든 준비가 끝났으니 `Jenkinsfile`에 지금까지의 CI 파이프라인을 작성할 차례입니다.
 
@@ -426,7 +426,7 @@ stage('Edit manifests') {
 마지막 스테이지는 차트 레포지토리의 이미지 태그를 수정하는 스테이지입니다.
 이 스테이지가 사실상 GitOps에서만 볼 수 있는 특별한 스테이지라 생각합니다.
 
-<br/><br/>
+<br /><br />
 
 이렇게 구성한 전체 파이프라인은 다음과 같습니다.
 
@@ -521,7 +521,7 @@ pipeline {
 Jenkins가 테스트를 돌리면 VM의 메모리를 초과해 워커 노드가 계속해서 중단되는 문제를 겪었습니다.
 그래서 임시적으로 테스트는 주석 처리 해놓았습니다.
 
-## 결과 확인
+# 결과 확인
 
 ![](7.png)
 
@@ -531,7 +531,7 @@ Jenkins가 테스트를 돌리면 VM의 메모리를 초과해 워커 노드가 
 
 Jenkins가 차트 레포지토리에서 이미지 태그를 변경하는 것까지도 확인 할 수 있습니다.
 
-## 마치며
+# 마치며
 
 지금까지 GitOps 환경에서 Jenkins로 CI 파이프라인을 구축한 경험을 공유해보았습니다.
 직접 GitOps 기반 CI 파이프라인을 처음부터 끝까지 구축해보니 생각보다 재밌다는 느낌을 많이 받았었습니다.

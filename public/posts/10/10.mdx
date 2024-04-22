@@ -7,7 +7,7 @@ tags: [Kotlin, Spring]
 이번 SW 마에스트로 프로젝트에서 백엔드를 개발하면서 프론트엔드를 위해 API 문서화 작업이 필요했습니다.
 그래서 적합한 API 문서화 방법을 찾는 도중, 제가 Spring REST Docs와 Swagger를 함께 도입한 경험을 공유해 드리려고 합니다.
 
-## Spring REST Docs
+# Spring REST Docs
 
 Spring 기반 API에는 문서화 도구로 Swagger와 Spring REST Docs라는 선택지가 있었는데, 현재 백엔드에는 코드 커버리지까지 적용해 테스트 코드를 작성하고 있었던 상황이라 Spring REST Docs가 적합하다고 생각했습니다.
 Spring REST Docs는 컨트롤러 계층의 테스트를 기반으로 API 명세서를 생성해주는 도구입니다.
@@ -100,7 +100,7 @@ fun <T> BodySpec<T, *>.document(
 스니펫이 API 명세서가 되는 과정까지가 완전히 자동적이지는 않았으며, 막상 스니펫을 이용해 직접 작성한 API 명세서는 UI가 맘에 들지 않았습니다.
 저는 이 점을 Swagger를 통해 극복하려고 했습니다.
 
-## Swagger
+# Swagger
 
 Swagger는 Spring REST Docs와 같이 API 문서화를 위한 도구입니다.
 
@@ -111,7 +111,7 @@ Swagger는 Spring REST Docs와 같이 API 문서화를 위한 도구입니다.
 Swagger는 프로덕션 코드에 작성된 어노테이션들을 기반으로 API 명세서를 생성합니다.
 이 점에서 프로덕션 코드에 문서화 관련 코드가 포함되는 것이 싫었던 저는 Swagger가 아닌 Spring REST Docs를 사용하기로 했던 것입니다.
 
-## Spring REST Docs with Swagger
+# Spring REST Docs with Swagger
 
 결국 이렇게 상반된 장단점을 가진 Spring REST Docs와 Swagger를 함께 사용해보기로 했습니다.
 우선 Spring REST Docs가 생성한 스니펫들을 Swagger가 읽을 수 있는 OpenAPI Specification에 맞춘 문서로 변환할 것입니다.
@@ -251,7 +251,7 @@ pipeline{
 
 이렇게 문서화하는 과정을 완전히 자동화하는데 성공했습니다.
 
-## 마치며
+# 마치며
 
 지금까지 Spring REST Docs와 Swagger를 함께 사용한 문서화 경험을 공유해보았습니다.
 확실히 Spring REST Docs와 Swagger를 함께 도입하니 협업 관점에서 도움을 굉장히 많이 얻은 것 같습니다.

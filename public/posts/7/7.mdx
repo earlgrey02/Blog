@@ -7,7 +7,7 @@ tags: [Kubernetes, Flannel, TroubleShooting]
 이번에 사이드 프로젝트에서 Kubernetes를 VM에 구축하게 되었습니다.
 직접 클러스터를 구축하면서 노드 간 네트워크 통신은 되는데 파드 간 네트워크 통신이 안되던 문제를 해결한 경험을 공유해 드리려고 합니다.
 
-## 문제 상황
+# 문제 상황
 
 이 문제는 Jenkins를 구축하는 과정에서 발생했습니다.
 Jenkins의 Init 컨테이너 내에서 Jenkins의 업데이트 센터인 `updates.jenkins.io`에 대해 `UnknownHostException`이 지속적으로 발생하는 것을 확인했습니다.
@@ -18,7 +18,7 @@ Jenkins의 Init 컨테이너 내에서 Jenkins의 업데이트 센터인 `update
 
 저는 이 문제를 DNS 서버의 문제라고 생각했었습니다.
 
-## CoreDNS
+# CoreDNS
 
 클러스터를 Kubeadm으로 구축했기 때문에 클러스터에서는 DNS 서버로 CoreDNS를 사용하고 있었습니다.
 
@@ -29,7 +29,7 @@ coredns-59c68c8fc8-hmrqr               1/1     Running   0          8d      10.2
 coredns-59c68c8fc8-s2747               1/1     Running   0          8d      10.244.0.6     controlplane
 ```
 
-위와 같이 CoreDNS는 마스터 노드와 워커 노드 각각에 배치되어 있습니다.
+위와 같이 CoreDNS는 마스터 노드와 워커 노드에 각각 배치되어 있습니다.
 
 ```console
 > kubectl get service -n kube-system
@@ -38,7 +38,7 @@ kube-dns   ClusterIP   10.96.0.10   <none>        53/UDP,53/TCP,9153/TCP   8d
 ```
 
 CoreDNS의 Service인 `kube-dns` 또한 존재하고 있었습니다.
-실제로 CoreDNS가 잘 작동하는지 확인하기 위해서 `Pod` 내에서 `nslookup`을 사용해보기로 했습니다.
+실제로 CoreDNS가 잘 작동하는지 확인하기 위해서 파드 내에서 `nslookup`을 사용해보기로 했습니다.
 
 ```yaml title="dnsutils.yaml" showLinesNumber
 apiVersion: v1
@@ -121,7 +121,7 @@ Address: 172.217.25.174
 이번엔 반대로 `node01`에 있는 `Pod`에 질의한 경우가 실패하고 `controlplane`에 있는 `Pod`에 질의한 경우가 성공한 것을 보았습니다.
 이로써 CoreDNS 문제가 아닌 네트워크 문제인 것을 알아챘습니다.
 
-## 노드 간 네트워크
+# 노드 간 네트워크
 
 하지만 노드 사이의 네트워크 문제라 하기에는 이미 워커 노드의 `kubelet`이 마스터 노드의 `kube-apiserver`와 잘 통신하고 있었습니다.
 
@@ -134,12 +134,12 @@ kube-flannel-ds-b6l6f   1/1     Running   0          8d
 
 또한 CNI(Container Network Interface) Plugin인 Flannel 또한 잘 기동된 것을 확인했습니다.
 
-## 파드 간 네트워크
+# 파드 간 네트워크
 
 그렇다면 VM 간 네트워크가 아닌 `Pod` 사이의 네트워크가 문제라고 생각할 수 있습니다.
 그래서 CNI에 대해 찾아보다가 내 Flannel 설정에 문제가 있었다는 것을 확인했습니다.
 
-## Flannel
+# Flannel
 
 Flannel은 VXLAN를 사용하여 패킷을 캡슐화해 서로 다른 `Node`에 있는 `Pod` 간 통신이 되도록 해주는 CNI 플러그인입니다.
 이때까지 몰랐던 점은 Flannel이 사용하는 특별한 포트 번호가 있다는 것이었습니다.
@@ -171,7 +171,7 @@ Address: 172.217.25.174
 
 정상적으로 다른 `Node`의 CoreDNS와 통신이 되어 문제가 해결된 것을 확인했습니다.
 
-## 마치며
+# 마치며
 
 지금까지 Kubernetes에서 DNS 관련 파드 간 네트워크 통신 문제를 극복한 경험을 공유해보았습니다.
 AWS EKS(Elastic Kubernetes Service) 등의 Managed Kubernetes를 사용할 때는 겪지 못했던 문제들을 겪으니 당황스러웠지만 잘 해결해서 다행입니다.

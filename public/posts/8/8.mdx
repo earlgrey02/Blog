@@ -1,0 +1,207 @@
+---
+title: JVM의 클래스 로더
+description: JVM에서 클래스를 로드하는 과정
+date: 2024-04-23
+tags: [Java, JVM]
+---
+이번 글은 JVM(Java Virtual Machine)에서 클래스를 로드하는 역할을 수행하는 클래스 로더(Class Loader)에 대한 글입니다.
+
+# 클래스 로더
+
+클래스 로더는 컴파일된 바이트 코드를 JVM의 메모리 영역인 런타임 데이터 영역에 적재하는 JVM의 구성 요소 중 하나입니다.
+JVM에서 바이트 코드는 클래스 로더에 의해 런타임 데이터 영역(Runtime Data Area)에 적재됩니다.
+이렇게 적재된 바이트 코드인 클래스는 로드되었다고 할 수 있습니다.
+
+# 클래스 로더의 작동 방식
+
+클래스 로더는 다음과 같이 세 단계를 거쳐 클래스를 로드합니다.
+
+## 로딩(Loading)
+
+로딩 단계는 바이트 코드를 런타임 데이터 영역 내 메서드 영역에 적재하는 단계입니다.
+메서드 영역에는 클래스의 메타 데이터를 저장하며, 이렇게 저장된 메타 데이터는 리플렉션(Reflection) 등에 사용됩니다.
+
+## 링킹(Linking)
+
+링킹 단계는 검증, 준비, 해석 단계로 세분화됩니다.
+검증 단계는 바이트 코드가 JLS(Java Language Specification)에 부합하는 지를 검사하는 단계로, 검증에 실패하는 경우에는 `VerifyError`가 발생합니다.
+그 다음, 준비 단계는 정적 변수에 대해 메모리를 할당하고 기본값으로 초기화하는 과정입니다.
+마지막으로 해석 단계는 이름 등의 심볼릭 참조(Symbolic Reference)를 물리적인 메모리 주소인  직접 참조(Direct Reference)로 변환하는 과정입니다.
+
+## 초기화(Initialization)
+
+초기화 단계는 메모리가 할당된 정적 변수에 실제 값을 할당하고 정적 블록을 실행하는 단계입니다.
+
+# 클래스 로더의 종류
+
+클래스 로더는 일반적으로 다음과 같이 세 종류가 있는데, 이 클래스 로더들은 계층적인 구조를 가지고 있습니다.
+
+## 부트스트랩 클래스 로더(BootStrap Class Loader)
+
+부트스트랩 클래스 로더는 최상위 클래스 로더로, JVM 시작 시점에 실행되는 클래스 로더입니다.
+클래스 로더가 작동하기 위해 필요로 하는 `Object`, `Class`, `ClassLoder` 등의 클래스들을 포함한 필수적인 클래스들을 로드합니다.
+최상위 클래스 로더이므로 네이티브 코드로 작성되어 있습니다.
+
+## 확장 클래스 로더(Extension Class Loader)
+
+확장 클래스 로더는 부트스트랩 클래스 로더의 하위 클래스 로더로, 일반적으로 `$JAVA_HOME/lib/ext` 디렉토리에 있는 JDK 확장 클래스들을 로드하는 클래스 로더입니다.
+
+## 시스템 클래스 로더(System Class Loader)
+
+시스템 클래스 로더는 최하위 클래스 로더로, JVM 실행 시 클래스 패스(Class Path) 경로 하위의 클래스들을 로드하는 클래스 로더입니다.
+
+```java title="Main.java" showLineNumbers
+class Main {
+   public static void main(String[] args) {
+      printClassLoader(Object.class);
+      printClassLoader(Main.class);
+   }
+
+   private static void printClassLoader(Class<?> cls) {
+      System.out.printf("%s의 클래스 로더: %s\n", cls.getName(), cls.getClassLoader());
+   }
+}
+```
+```console
+java.lang.Object의 클래스 로더: null
+Main의 클래스 로더: jdk.internal.loader.ClassLoaders$AppClassLoader@251a69d7
+```
+
+네이티브 코드로 작성된 부트스트랩 클래스 로더는 Java에서는 `null`로 표시됩니다.
+`Main`의 경우는 애플리케이션 클래스 로더(Application Class Loader)라고도 불리는 시스템 클래스 로더에 의해 로드된 것을 확인할 수 있습니다.
+
+# 클래스 로더의 원칙
+
+클래스 로더는 다음과 같은 원칙들을 준수해야 합니다.
+
+## 위임 원칙(Delegation Principle)
+
+위임 원칙은 클래스 로드는 상위 클래스 로더로 위임해야 한다는 원칙입니다.
+어떤 클래스를 로드함에 있어서 하위 클래스 로더부터 상위 클래스 로더까지 이미 로드된 클래스인지 확인하며, 만약 로드된 적이 없는 클래스라면 상위 클래스 로더부터 클래스를 찾아 로드하기 시작합니다.
+최하위 클래스 로더까지 클래스를 찾지 못해 로드에 실패하면 `ClassNotFoundException`이 발생합니다.
+
+## 가시성 원칙(Visibility Principle)
+
+가시성 원칙은 하위 클래스 로더는 상위 클래스 로더가 로드한 클래스들을 볼 수 있지만 상위 클래스 로더는 하위 클래스 로더가 로드한 클래스를 볼 수 없어야 한다는 원칙입니다.
+
+## 유일성 원칙(Uniqueness Principle)
+
+유일성 원칙은 이미 로드된 클래스가 다시 로드되지 않아야 한다는 원칙입니다.
+즉, 로드된 클래스의 유일성을 보장하도록 하는 원칙입니다.
+
+```java title="ClassLoader.java" showLineNumbers
+public abstract class ClassLoader {
+    protected Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
+        synchronized (getClassLoadingLock(name)) {
+            Class<?> c = findLoadedClass(name);
+            if (c == null) {
+                long t0 = System.nanoTime();
+                try {
+                    if (parent != null) {
+                        c = parent.loadClass(name, false);
+                    } else {
+                        c = findBootstrapClassOrNull(name);
+                    }
+                } catch (ClassNotFoundException e) {}
+
+                if (c == null) {
+                    long t1 = System.nanoTime();
+                    c = findClass(name);
+
+                    PerfCounter.getParentDelegationTime().addTime(t1 - t0);
+                    PerfCounter.getFindClassTime().addElapsedTimeFrom(t1);
+                    PerfCounter.getFindClasses().increment();
+                }
+            }
+            if (resolve) {
+                resolveClass(c);
+            }
+            return c;
+        }
+    }
+}
+```
+
+실제로 클래스 로더는 동기화와 `getClassLoadingLock()`을 통해 멀티 스레드 환경에서도 클래스 로드가 정상적으로 수행되도록 설계되었습니다.
+또한 유일성 원칙을 위해 로드된 클래스를 찾는 `findLoadedClass()`를 제일 먼저 호출했으며, 상위 클래스 로더인 `parent`의 `loadClass()`를 다시 한번 호출하면서 위임 원칙을 준수하는 것을 확인할 수 있습니다.
+
+# 동적 로딩의 종류
+
+클래스 로더는 클래스를 한번에 전부 로드하지 않고 동적으로 로드합니다.
+이때, 로드하는 시점에 따라서 동적 로딩의 종류가 나뉩니다.
+설명에 앞서 클래스 로드 과정을 출력하기 위해 VM 옵션으로 `-Xlog:class+load=info`를 사용했습니다.
+
+## 로드타임 동적 로딩(Load-time Dynamic Loading)
+
+로드타임 동적 로딩이란 특정 클래스를 로드하는 시점에 연관된 클래스도 로드하는 동적 로딩입니다.
+
+```java title="Main.java" showLineNumbers
+public class Main {
+    static {
+        System.out.println("static 블록 실행");
+        new Person();
+    }
+
+    public static void main(String[] args) {
+        System.out.println("main 실행");
+    }
+}
+
+class Person {}
+```
+```console
+[0.035s][info][class,load] Main source
+static 블록 실행
+[0.035s][info][class,load] Person source
+main 실행
+```
+
+위 코드에서 클래스 로더는 `Main`을 로드한 후 초기화 과정을 수행합니다.
+이때, `static` 블록 내에서 `Person`을 참조했으므로 `Person`도 함께 로드되는 것을 볼 수 있습니다.
+이 모든 과정은 `main` 메서드가 실행되기 전인 로드타임에 수행됩니다.
+
+```java title="Main.java" showLineNumbers
+public class Main {
+    static {
+        System.out.println("static 블록 실행");
+    }
+
+    public static void main(String[] args) {
+        System.out.println("main 실행");
+    }
+}
+
+class Person {}
+```
+```console
+[0.034s][info][class,load] Main source
+static 블록 실행
+main 실행
+```
+
+만약 `static` 블록 내에서 `Person`을 사용하는 코드를 없애면 `Person`을 로드하지 않는 것도 확인할 수 있습니다.
+`static` 블록뿐만 아니라 상속 등으로 클래스가 사용되는 경우에도 로드타임 동적 로딩이 발생합니다.
+
+## 런타임 동적 로딩(Runtime Dynamic Loading)
+
+런타임 동적 로딩은 클래스 로드 시점이 아니라 코드 실행 시점에 사용하는 클래스를 로드하는 동적 로딩입니다.
+
+```java title="Main.java" showLineNumbers
+public class Main {
+    public static void main(String[] args) {
+        System.out.println("main 실행");
+        Person person = new Person();
+    }
+}
+
+class Person {}
+```
+```console
+[0.034s][info][class,load] Main source
+main 실행
+[0.034s][info][class,load] Person source
+```
+
+위 코드에서 `main`이 실행된 후, `Person`을 사용하는 시점에 `Person`이 로드되는 것을 확인할 수 있습니다.
+이는 클래스를 로드하는 시점이 아닌 실행 시점에 수행되므로 런타임 동적 로딩입니다.
+단순히 인스턴스 생성뿐만 아니라 리플렉션(Reflection) 등을 사용되는 경우에도 런타임 동적 로딩이 발생합니다.
