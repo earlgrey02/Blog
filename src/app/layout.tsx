@@ -6,6 +6,7 @@ import { Metadata } from 'next'
 import Head from './head'
 import Header from '@/component/Header/Header'
 import Footer from '@/component/Footer/Footer'
+import ReduxProvider from '@/lib/redux'
 
 interface Props {
   children: ReactNode
@@ -25,15 +26,15 @@ const metadata: Metadata = {
 const Layout = ({ children }: Props) => {
   return (
     <html>
-      <Head />
-      <body>
-        <div className={styles.container}>
-          <Header />
-          {children}
-          <Footer />
-        </div>
-        <Analytics />
-      </body>
+    <Head />
+    <body>
+    <div className={styles.container}>
+      <Header />
+      <ReduxProvider children={children} />
+      <Footer />
+    </div>
+    <Analytics />
+    </body>
     </html>
   )
 }
