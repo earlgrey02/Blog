@@ -5,7 +5,7 @@ import { useCallback, useState } from 'react'
 import MotionedDiv from './motion'
 
 interface Props {
-  src: string;
+  src: string
   alt: string
 }
 
@@ -24,7 +24,7 @@ const Image = ({ src, alt }: Props) => {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.5 }}
-          key='spinner'
+          key="spinner"
         />
       )}
       <NextImage
@@ -32,7 +32,7 @@ const Image = ({ src, alt }: Props) => {
         alt={alt}
         width={570}
         height={850}
-        objectFit='contain'
+        objectFit="contain"
         onLoadingComplete={onLoadingCompleteHandler}
         style={{ height: 'auto', maxWidth: '100%' }}
       />

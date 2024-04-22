@@ -24,7 +24,8 @@
   display: flex;
 }
 
-.activities, .certifications {
+.activities,
+.certifications {
   margin-top: 3.4rem;
   flex: 1;
 }
@@ -35,7 +36,8 @@
   font-weight: bold;
 }
 
-.activity, .certification {
+.activity,
+.certification {
   margin-top: 0.3rem;
   font-size: calc(0.2vw + 0.8rem);
   letter-spacing: -0.05rem;

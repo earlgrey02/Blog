@@ -26,15 +26,15 @@ const metadata: Metadata = {
 const Layout = ({ children }: Props) => {
   return (
     <html>
-    <Head />
-    <body>
-    <div className={styles.container}>
-      <Header />
-      <ReduxProvider children={children} />
-      <Footer />
-    </div>
-    <Analytics />
-    </body>
+      <Head />
+      <body>
+        <div className={styles.container}>
+          <Header />
+          <ReduxProvider>{children}</ReduxProvider>
+          <Footer />
+        </div>
+        <Analytics />
+      </body>
     </html>
   )
 }

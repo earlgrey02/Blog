@@ -6,7 +6,7 @@ import MotionedDiv from '@/lib/motion'
 import { Variants } from 'framer-motion'
 
 interface Props {
-  post: Post;
+  post: Post
   variants: Variants
 }
 

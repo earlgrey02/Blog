@@ -1,4 +1,9 @@
-import { Activity, Certification, Contact, Profile } from '@/modules/profile/profile'
+import {
+  Activity,
+  Certification,
+  Contact,
+  Profile
+} from '@/modules/profile/profile'
 
 const contacts: Contact[] = [
   {

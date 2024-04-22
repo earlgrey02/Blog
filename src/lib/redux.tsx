@@ -8,7 +8,7 @@ interface Props {
 }
 
 const ReduxProvider = ({ children }: Props) => {
-  return <Provider store={store} children={children} />
+  return <Provider store={store}>{children}</Provider>
 }
 
 export default ReduxProvider
