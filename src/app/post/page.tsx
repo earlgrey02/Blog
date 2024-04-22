@@ -6,10 +6,13 @@ import Post from '@/component/Post/Post'
 import MotionedDiv from '@/lib/motion'
 import { useEffect, useMemo, useState } from 'react'
 import { Variants } from 'framer-motion'
+import { useDispatch, useSelector } from 'react-redux'
+import { setPage } from '@/redux/reducers/pageSlice'
 
 const Page = () => {
-  const [page, setPage] = useState(0)
+  const page = useSelector((store: Store) => store.page)
   const [isEnter, setIsEnter] = useState(true)
+  const dispatch = useDispatch()
 
   const pages = useMemo(
     () =>
@@ -79,7 +82,7 @@ const Page = () => {
                 ? { backgroundColor: 'rgb(210, 210, 210)', scale: 1.05 }
                 : {}
             }
-            onClick={() => setPage(index)}
+            onClick={() => dispatch(setPage(index))}
             key={index}>
             {index + 1}
           </div>
