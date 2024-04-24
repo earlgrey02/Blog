@@ -3,7 +3,7 @@ import { allPosts } from 'contentlayer/generated'
 
 const sitemap = (): MetadataRoute.Sitemap => {
   const posts: MetadataRoute.Sitemap = allPosts.map(post => ({
-    url: `https://acme.com/blog/${post.id}`,
+    url: `https://earlgrey02.com/post/${post.id}`,
     lastModified: new Date(post.date),
     changeFrequency: 'weekly'
   }))
