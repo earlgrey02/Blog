@@ -44,7 +44,8 @@ const generateMetadata = async ({ params }: Props): Promise<Metadata> => {
       title: post.title,
       description: post.description,
       type: 'article'
-    }
+    },
+    keywords: post.tags
   }
 }
 
