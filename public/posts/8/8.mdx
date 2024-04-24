@@ -204,4 +204,68 @@ main 실행
 
 위 코드에서 `main`이 실행된 후, `Person`을 사용하는 시점에 `Person`이 로드되는 것을 확인할 수 있습니다.
 이는 클래스를 로드하는 시점이 아닌 실행 시점에 수행되므로 런타임 동적 로딩입니다.
-단순히 인스턴스 생성뿐만 아니라 리플렉션(Reflection) 등을 사용되는 경우에도 런타임 동적 로딩이 발생합니다.
+단순히 인스턴스 생성뿐만 아니라 리플렉션 등을 사용되는 경우에도 런타임 동적 로딩이 발생합니다.
+
+# 클래스 로드 활용
+
+앞서 설명했듯이, 클래스 로더는 로드된 클래스는 다시 로드되어서는 안된다는 원칙을 가지고 있습니다.
+이는 클래스 로드 과정이 멀티 스레드 환경에서도 동기화를 통해 지켜지고 있는 부분입니다.
+이 원칙을 활용하는 대표적인 예시로 싱글톤 패턴과 JDBC(Java Database Connectivity)가 있습니다.
+
+## 싱글톤 패턴
+
+```java title="Singleton.java" showLineNumbers
+public class Singleton {
+    private Singleton() {}
+
+    private static class SingletonHolder {
+        private static final Singleton SINGLETON = new Singleton();
+    }
+
+    public static Singleton getInstance() {
+        return SingletonHolder.SINGLETON;
+    }
+}
+```
+
+위 코드는 유일성 원칙을 활용한 싱글톤 패턴 구현 코드입니다.
+실제로 싱글톤 인스턴스가 생성되는 시점은 `getInstance()`를 최초로 호출하는 시점이자 `SingletonHolder`가 로드되는 시점입니다.
+이때, 클래스를 로드하는 과정이 클래스 로더의 유일성 원칙에 의해 한번만 수행되게 되므로 Thread-safe하게 싱글톤 인스턴스를 생성할 수 있습니다.
+
+## JDBC
+
+JDBC에서는 표준 인터페이스인 `Driver`를 통해 외부 기술에 의존하지 않도록 설계되었습니다.
+클래스 로드의 유일성 원칙은 `Driver` 구현체가 JDBC에 등록되는 과정에서 활용됩니다.
+
+```java title="DriverManager.java" showLineNumbers
+public clsss DriverManager {
+    public static void registerDriver(java.sql.Driver driver) throws SQLException {
+        registerDriver(driver, null);
+    }
+}
+```
+
+`Driver`는 `DriverManager`의 `registerDriver()`를 통해 등록하게 됩니다.
+이때, 멀티 스레드 환경에서 동시성 문제로 여러 `Driver`가 등록되는 문제가 발생할 수 있습니다.
+
+```java
+Class.forName("com.mysql.cj.jdbc.Driver");
+```
+
+그래서 일반적으로 JDBC 드라이버를 리플렉션을 통해 로드하는 방법을 사용하게 됩니다.
+
+```java title="Driver.java" showLineNumbers
+public class Driver extends NonRegisteringDriver implements java.sql.Driver {
+    static {
+        try {
+            java.sql.DriverManager.registerDriver(new Driver());
+        } catch (SQLException E) {
+            throw new RuntimeException("Can't register driver!");
+        }
+    }
+}
+```
+
+MySQL의 `Driver`를 예시로 보자면, 정적 블록 내에서 `registerDriver()`를 호출하는 것을 확인할 수 있습니다.
+정적 블록은 클래스가 로드되는 시점에 클래스 로더의 유일성 원칙에 의해 Thread-safe하게 실행되게 됩니다.
+이렇게 `registerDriver()`에 대한 동시성 문제를 해결한 것입니다.

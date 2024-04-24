@@ -12,7 +12,7 @@ tags: [Kubernetes, DevOps, Jenkins]
 
 우선 Jenkins를 클러스터 내에 구동해야 했습니다.
 이때 사용하는 방법으로는 Helm을 사용하기로 했습니다.
-그 이유는 Jenkins와 관련된 `Pod`, `Service`, `Ingress` 등을 수동으로 배포하고 관리하기는 힘들다고 생각했기 때문입니다.
+그 이유는 Jenkins와 관련된 파드, 서비스, 인그레스 등을 수동으로 배포하고 관리하기는 힘들다고 생각했기 때문입니다.
 Helm을 사용하면 다른 복잡한 요소 상관없이 `values.yaml`만 잘 수정해서 배포하면 됩니다.
 
 ```console
@@ -49,9 +49,9 @@ persistence:
 ```
 
 `jenkins-values.yaml`에서 위 부분만 값을 수정합니다.
-`Pod`를 Root 권한으로 실행할 것이며 이미 존재하는 `PersistenceVolumeClaim`을 사용할 것입니다.
-또한 `/jenkins`를 Prefix로 가지는 `Ingress`를 생성할 것이므로 이에 맞게 `jenkinsUriPrefix`도 수정해줍니다.
-`Ingress`는 제가 사전에 배포한 `NodePort` 타입의 Nginx Ingress Controller에 설정됩니다.
+인그레스를 Root 권한으로 실행할 것이며 이미 존재하는 `PersistenceVolumeClaim`을 사용할 것입니다.
+또한 `/jenkins`를 Prefix로 가지는 인그레스를 생성할 것이므로 이에 맞게 `jenkinsUriPrefix`도 수정해줍니다.
+인그레스는 제가 사전에 배포한 `NodePort` 타입의 Nginx Ingress Controller에 설정됩니다.
 
 ```yaml title="jenkins-volume.yaml"
 apiVersion: v1
@@ -82,7 +82,7 @@ spec:
 ```
 
 이번 프로젝트에서 사용하는 Kubernetes는 AWS EKS(Elastic Kubernetes Service) 등의 Managed Kubernetes가 아니므로 Block Storage를 프로비저닝할 Storage Class를 사용하기는 어렵습니다.
-그래서 우선은 임시적으로 `hostPath` 타입의 `PersistenceVolume`과 `PersistenceVolumeClaim`을 정의했습니다.
+그래서 우선은 임시적으로 `hostPath` 타입의 Persistence Volume과 Persistence Volume Claim을 정의했습니다.
 이후에 워커 노드가 많아진다면 NFS(Network File System) 등의 대안을 선택해야 합니다.
 
 ```console
@@ -270,9 +270,9 @@ spec:
       imagePullSecrets:
       - name: docker-secret
 ```
-`templates`에 `Deployment`, `Service`, `Ingress` 등에 대한 Manifest들을 작성합니다.
+`templates`에 디플로이먼트, 서비스, 인그레스 등에 대한 Manifest들을 작성합니다.
 구체적인 값들은 `values.yaml`에서 주입받도록 했습니다.
-위와 같이 `values.yaml`에 있는 값은 Manifest에서 `{{ .Values.<Key> }}` 형태로 참조할 수 있습니다.
+위와 같이 `values.yaml`에 있는 값은 매니페스트에서 `{{ .Values.<Key> }}` 형태로 참조할 수 있습니다.
 
 ```yaml title="values.yaml"
 env: dev
@@ -324,7 +324,7 @@ ingress:
   annotations:
 ```
 
-`values.yaml`에는 `templates` 내의 Manifest들에 설정될 값들을 정의하면 됩니다.
+`values.yaml`에는 `templates` 내의 매니페스트들에 설정될 값들을 정의하면 됩니다.
 이런 식으로 차트를 구성하면 이미지가 변경될 때 간단하게 `values.yaml`에 있는 이미지 태그들만 변경하면 됩니다.
 이후에 차트를 기반으로 서비스를 배포하는 것은 ArgoCD의 몫입니다.
 
@@ -355,7 +355,7 @@ pipeline {
 }
 ```
 
-우선 차트 레포지토리 내의 이미지 태그를 변경하기 위해 YAML 내에서 값을 조작할 수 있는 `yq`를 사용합니다.
+우선 차트 레포지토리 내의 이미지 태그를 변경하기 위해 YAML 형식의 파일에서 값을 조작할 수 있는 `yq`를 사용합니다.
 `yq` 컨테이너는 Jenkins Agent Pod에 포함되어 배포됩니다.
 
 ```groovy showLineNumbers
