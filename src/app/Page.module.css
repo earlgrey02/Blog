@@ -8,9 +8,9 @@
 }
 
 .contact {
-  padding: calc(0.1vw + 0.4rem);
+  padding: 0.5rem;
   border-radius: 0.2rem;
-  font-size: calc(0.1vw + 0.7rem);
+  font-size: 0.8rem;
   background-color: rgb(240, 240, 240);
   transition: 0.3s;
 }
@@ -36,8 +36,7 @@
   font-weight: bold;
 }
 
-.activity,
-.certification {
+.activity, .certification {
   margin-top: 0.3rem;
   font-size: calc(0.2vw + 0.8rem);
   letter-spacing: -0.05rem;

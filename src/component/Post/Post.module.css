@@ -9,13 +9,13 @@
 }
 
 .title {
-  font-weight: bold;
+  font-weight: bolder;
   font-size: calc(0.3vw + 1rem);
   transition: 0.5s;
 }
 
 .description {
-  margin-top: 0.5rem;
+  margin-top: 0.4rem;
   font-size: calc(0.2vw + 0.75rem);
   color: rgb(120, 120, 120);
   word-break: keep-all;
@@ -23,7 +23,7 @@
 
 .tags {
   display: flex;
-  margin-top: 0.5rem;
+  margin-top: 0.45rem;
   gap: calc(0.2vw + 0.2rem);
   flex-wrap: wrap;
 }
@@ -32,7 +32,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: calc(0.1vw + 0.3rem);
+  padding: calc(0.1vw + 0.35rem);
   border-radius: 0.2rem;
   font-size: calc(0.2vw + 0.6rem);
   background-color: rgb(230, 230, 230);
