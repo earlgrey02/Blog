@@ -21,14 +21,14 @@ const Page = () => {
         .sort((post1, post2) =>
           compareDesc(new Date(post1.date), new Date(post2.date))
         )
-        .reduce((pages, post, index) => {
+        .reduce<Post[][]>((pages, post, index) => {
           const page = Math.floor(index / 4)
 
           if (!pages[page]) pages[page] = []
           pages[page].push(post)
 
           return pages
-        }, [] as Post[][]),
+        }, []),
     []
   )
 
