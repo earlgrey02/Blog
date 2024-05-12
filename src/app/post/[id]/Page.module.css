@@ -51,6 +51,11 @@
   margin-top: calc(0.2vw + 0.6rem);
 }
 
+.content a {
+  border-bottom: 0.08rem solid rgb(180, 180, 180);
+  padding-bottom: 0.1rem;
+}
+
 .image {
   position: relative;
   display: flex;
