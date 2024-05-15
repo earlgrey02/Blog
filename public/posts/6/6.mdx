@@ -60,9 +60,9 @@ Kubernetes 자격증들은 모두 Google, Intel, VMWare 등의 기업들이 속�
 
 <br /><br />
 
-마지막으로는 `NotReady` 상태의 죽은 노드를 복원하는 문제였습니다.
-해당 노드에서 Kubelet이 죽은 상태길래 설정 파일 문제로 생각해 설정 파일을 찾고 있었습니다.
-근데 혹시나 해서 `service restart kubelet`을 통해 Kubelet을 다시 시작하니 노드도 정상적으로 작동하기 시작했었습니다.
+마지막으로는 `NotReady` 상태의 죽은 Node를 복원하는 문제였습니다.
+해당 Node에서 Kubelet이 죽은 상태길래 설정 파일 문제로 생각해 설정 파일을 찾고 있었습니다.
+근데 혹시나 해서 `service restart kubelet`을 통해 Kubelet을 다시 시작하니 Node도 정상적으로 작동하기 시작했었습니다.
 배점이 높은 트러블 슈팅 문제 치고는 의외로 쉽게 풀었어서 기억에 남았던 것 같습니다.
 
 # 공부 방법

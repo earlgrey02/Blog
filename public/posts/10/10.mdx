@@ -1,258 +1,162 @@
 ---
-title: Spring REST Docs와 Swagger를 함께 사용한 API 문서화
-description: Spring에서 API 명세서를 자동으로 생성하는 방법
-date: 2023-11-06
-tags: [Kotlin, Spring]
+title: 동기와 비동기, 블로킹과 논블로킹
+description: JavaScipt로 알아보는 동기와 비동기, 블로킹과 논블로킹
+date: 2024-04-01
+tags: [JavaScript]
 ---
-이번 SW 마에스트로 프로젝트에서 백엔드를 개발하면서 프론트엔드를 위해 API 문서화 작업이 필요했습니다.
-그래서 적합한 API 문서화 방법을 찾는 도중, 제가 Spring REST Docs와 Swagger를 함께 도입한 경험을 공유해 드리려고 합니다.
+이번 글은 동기와 비동기, 블로킹과 논블로킹에 대한 글입니다.
 
-# Spring REST Docs
+# 동기 & 비동기
 
-Spring 기반 API에는 문서화 도구로 Swagger와 Spring REST Docs라는 선택지가 있었는데, 현재 백엔드에는 코드 커버리지까지 적용해 테스트 코드를 작성하고 있었던 상황이라 Spring REST Docs가 적합하다고 생각했습니다.
-Spring REST Docs는 컨트롤러 계층의 테스트를 기반으로 API 명세서를 생성해주는 도구입니다.
-Spring REST Docs를 사용하기 위해서는 Spring REST Docs가 설정된 테스트 환경과 테스트 코드들이 필요합니다.
+동기(Synchronous) 및 비동기(Asynchronous)는 작업의 요청과 응답이 동시에 발생하는 지에 따라 달라집니다.
 
-```kotlin title="ControllerTest.kt" showLineNumbers
-@AutoConfigureRestDocs
-abstract class ControllerTest : DescribeSpec() {
-    @Autowired
-    private lateinit var applicationContext: ApplicationContext
+## 동기
 
-    @Autowired
-    private lateinit var restDocumentation: RestDocumentationContextProvider
+동기는 요청과 응답이 동시에 발생한다는 의미를 가지고 있습니다.
+요청과 응답이 동시에 발생한다는 의미는 응답이 오기까지 대기해야 한다는 뜻이기도 합니다.
 
-    protected val webClient: WebTestClient by lazy {
-        WebTestClient.bindToApplicationContext(applicationContext)
-            .configureClient()
-            .filter(WebTestClientRestDocumentation.documentationConfiguration(restDocumentation))
-            .build()
-    }
-}
+```js title="index.js" showLineNumbers
+console.log(1)
+console.log(2)
+console.log(3)
+```
+```console
+1
+2
+3
 ```
 
-우선 컨트롤러 계층 테스트에 사용되는 `WebTestClient`에 Spring REST Docs의 `WebTestClientRestDocumentationConfigurer`를 `ExchangeFilterFunction`으로 등록합니다.
-이렇게 되면 `WebTestClient`를 사용하는 테스트에서 자동적으로 스니펫을 생성할 수 있습니다.
-추가로 Spring REST Docs가 설정된 `WebTestClient`를 모든 컨트롤러 계층 테스트에 적용하기 위해 `ControllerTest`라는 추상 클래스 내에 `WebTestClient`를 포함시켰습니다.
+위 코드에서 출력 작업들은 동기적으로 수행된 것을 확인할 수 있습니다.
+요청인 메서드 호출과 응답인 출력이 동시에 발생했으므로 모든 작업들이 순서대로 수행되었습니다.
+이러한 동기적 설계는 간단하고 직관적인 장점을 가지고 있지만 작업이 완료되어 응답을 받기 전까지는 아무런 작업도 하지 못한다는 단점을 가지고 있습니다.
 
-```kotlin title="QuizControllerTest.kt" showLineNumbers {20-24}
-@WebFluxTest(QuizRouter::class, QuizHandler::class)
-class QuizControllerTest : ControllerTest() {
-    @MockkBean
-    private lateinit var quizService: QuizService
+## 비동기
 
-    init {
-        describe("getQuizById()는") {
-            context("퀴즈가 존재하는 경우") {
-                every { quizService.getQuizById(any()) } returns createQuizResponse()
-                withMockUser()
+비동기는 요청가 응답이 동시에 발생하지 않는다는 의미를 가지고 있습니다.
+이는 동기와 다르게, 응답이 오기까지 대기할 필요가 없다는 뜻이기도 합니다.
 
-                it("상태 코드 200과 quizResponse를 반환한다.") {
-                    webClient
-                        .get()
-                        .uri("/quiz/{id}", ID)
-                        .exchange()
-                        .expectStatus()
-                        .isOk
-                        .expectBody<QuizResponse>()
-                        .document(
-                            "식별자를 통한 퀴즈 단일 조회 성공(200)",
-                            pathParameters("id" paramDesc "식별자"),
-                            responseFields(quizResponseFields)
-                        )
-                }
-            }
-        }
-    }
-}
+```js title="index.js" showLineNumbers
+console.log("시작")
+setTimeout(() => console.log("setTimeout() 종료"), 3000)
+console.log("종료")
 ```
-```kotlin title="RestDocsUtil.kt" showLineNumbers
-infix fun String.desc(description: String): FieldDescriptor =
-    PayloadDocumentation.fieldWithPath(this)
-        .description(description)
-
-infix fun String.paramDesc(description: String): ParameterDescriptor =
-    RequestDocumentation.parameterWithName(this)
-        .description(description)
-
-fun <T> BodySpec<T, *>.document(
-    identifier: String,
-    vararg snippets: Snippet
-): BodySpec<T, *> =
-    consumeWith(
-        WebTestClientRestDocumentationWrapper.document<T>(
-            identifier,
-            Preprocessors.preprocessRequest(Preprocessors.prettyPrint()),
-            Preprocessors.preprocessResponse(Preprocessors.prettyPrint()),
-            *snippets
-        )
-    )
+```console
+시작
+종료
+setTimeout() 종료
 ```
 
-기존의 컨트롤러 계층 테스트 코드에 `ControllerTest`에 포함된 `WebTestClient`와 함께 API 명세에 대한 정보만 추가해주면 다음과 같이 알아서 `/build/generated-snippets` 경로에 스니펫이 생성됩니다.
-참고로 Kotlin DSL을 통해 문서화 코드를 어느정도 간소화하였습니다.
+위 코드를 보면 `setTimeout()`이 호출되고 종료가 되지 않았는데 그 다음 작업인 `"종료"`를 출력히는 것을 확인할 수 있습니다.
+이 이유는 `setTimeout()`이 비동기적으로 수행되기 때문에 결과를 기다리지 않고 다음 줄을 실행하기 때문입니다.
+이처럼 비동기적 설계는 동기적 설계보다는 예측이 힘들다는 단점을 가지고 있지만 작업의 완료 여부에 상관없이 다른 작업을 수행할 수 있어 성능 면에서 효율적이라는 장점을 가지고 있습니다.
+일반적으로 Network IO 등의 오래 걸리는 작업들을 비동기적으로 설계합니다.
 
-![](1.png)
+# 블로킹 & 논블로킹
 
-이렇게 생성된 스니펫들은 AsciiDoc 형태로 저장되는데, 이 스니펫만으로는 API 명세를 표현하기 힘듭니다.
-그래서 스니펫들을 이용해서 API 명세서를 직접 작성해야 합니다.
-바로 이 점이 Spring REST Docs의 단점이라고 생각합니다.
-스니펫이 API 명세서가 되는 과정까지가 완전히 자동적이지는 않았으며, 막상 스니펫을 이용해 직접 작성한 API 명세서는 UI가 맘에 들지 않았습니다.
-저는 이 점을 Swagger를 통해 극복하려고 했습니다.
+블로킹(Blocking) 및 논블로킹(Non-blocking)은 동기 및 비동기와 다르게 제어권의 소유자에 따라 달라집니다.
 
-# Swagger
+## 블로킹
 
-Swagger는 Spring REST Docs와 같이 API 문서화를 위한 도구입니다.
+블로킹은 제어권이 요청한 쪽이 아닌 요청 받은 쪽으로 전달되는 것을 의미합니다.
+이렇게 되면 요청한 쪽은 요청 받은 쪽에서 제어권을 다시 넘겨주지 않는 이상, 다른 작업을 수행할 수 없습니다.
 
-![](2.png)
+## 논블로킹
 
-그러나 Swagger는 Spring REST Docs와 다르게 위처럼 깔끔한 전용 UI도 제공하며, API 테스트 기능까지 가지고 있습니다.
-이럼에도 앞서 문서화 도구로 Swagger를 사용하지 않았던 이유는 Swagger가 테스트 코드에만 영향을 주는 Spring REST Docs와 달리 프로덕션 코드에도 영향을 주기 때문입니다.
-Swagger는 프로덕션 코드에 작성된 어노테이션들을 기반으로 API 명세서를 생성합니다.
-이 점에서 프로덕션 코드에 문서화 관련 코드가 포함되는 것이 싫었던 저는 Swagger가 아닌 Spring REST Docs를 사용하기로 했던 것입니다.
+논블로킹은 제어권이 요청한 쪽에서 계속 가지고 있는 것을 의미합니다.
+이는 블로킹과 다르게, 요청한 쪽에서 계속해서 다른 작업을 수행할 수 있다는 뜻입니다.
 
-# Spring REST Docs with Swagger
+# 동기 / 비동기 & 블로킹 / 논블로킹
 
-결국 이렇게 상반된 장단점을 가진 Spring REST Docs와 Swagger를 함께 사용해보기로 했습니다.
-우선 Spring REST Docs가 생성한 스니펫들을 Swagger가 읽을 수 있는 OpenAPI Specification에 맞춘 문서로 변환할 것입니다.
-그렇게 변환한 문서를 Swagger로 읽으면 끝입니다.
+## 동기 & 블로킹
 
-```kotlin title="build.gradle.kts" showLineNumbers
-plugins {
-    id("com.epages.restdocs-api-spec") version "0.17.1"
-    ...
-}
+동기 및 블로킹 방식은 요청 및 응답이 동시에 처리되며, 요청과 응답 사이에 다른 작업을 할 수 없습니다.
 
-dependencies {
-    testImplementation("com.epages:restdocs-api-spec-webtestclient:0.17.1")
-    testImplementation("com.epages:restdocs-api-spec:0.17.1")
-    ...
-}
+```js title="index.js" showLineNumbers
+console.log("시작");
+fs.readFileSync('index.txt', 'utf8')
+console.log("종료");
+```
+```console
+시작
+종료
 ```
 
-우선 스니펫들을 OpenAPI 문서로 변환해주는데 사용하는 의존성들을 추가합니다.
+위 코드에서는 File IO를 동기 및 블로킹 방식으로 수행하고 있습니다.
+`readFileSync()`가 수행되는 동안 다른 작업을 할 수 없으며, 작업이 끝나고 나서야 다음 줄이 실행됩니다.
 
+## 동기 & 논블로킹
 
-```kotlin title="build.gradle.kts" showLineNumbers {4, 9-16}
-tasks {
-    test {
-        useJUnitPlatform()
-        finalizedBy(jacocoTestReport, withType<OpenApi3Task>())
-    }
-    ...
+동기 및 논블로킹은 요청 및 응답은 동시에 처리되며, 요청과 응답 사이에 다른 작업을 수행할 수 있습니다.
+대표적으로 JavaScript에서 동기 및 논블로킹의 예시로 `await`이 있습니다.
+
+```js title="index.js" showLineNumbers
+const func = async () => {
+  console.log("시작");
+  axios.get("/user/1")
+  console.log("종료");
 }
 
-openapi3 {
-    setServer("Quizit")
-    title = "Quizit API"
-    version = "v1"
-    format = "yaml"
-    outputFileNamePrefix = "api"
-    outputDirectory = "src/main/resources/static/docs"
+func()
+```
+```console
+시작
+종료
+```
+
+`axios.get()`에서는 Network IO 작업을 수행하는 함수입니다.
+위 코드에서는 `axios.get()`에서 응답을 받기 전에 다음 줄이 실행이 되므로 비동기 및 논블로킹 방식으로 수행된다고 할 수 있습니다.
+
+```js title="index.js" showLineNumbers
+const func = async () => {
+  console.log("시작");
+  const response = await axios.get("/user/1")
+  console.log(response.data);
 }
+
+func()
+```
+```console
+시작
+{"id": 1, "nickname": "earlgrey02"}
 ```
 
-그 다음, 스니펫을 OpenAPI 문서로 변환하는 작업인 `openapi3`를 설정한 후 테스트 작업 과정에 추가했습니다.
-이렇게 되면 테스트 코드를 실행한 후 Spring REST Docs에 의해 스니펫들이 생성되고 `openapi3` 작업을 거쳐 스니펫들을 기반으로 한 OpenAPI 문서가 `/src/main/resources/static/docs` 경로에 생성됩니다.
-참고로 `/src/main/resources/static/docs` 디렉토리가 존재하는 상태여야 합니다.
+하지만 `axios.get()`의 아래 줄에서 응답을 다루는 코드가 있다면 해당 부분이 동기적으로 처리될 필요가 있습니다.
+이에 따라 동기 처리를 위해 `await`을 사용하게 됩니다.
+결과를 보면 실제로 동기적으로 작업이 처리되는 것을 확인할 수 있으며, `await`으로 인해 함수가 일시적으로 중지되어도 인터프리터는 계속해서 코드를 실행할 수 있으므로 논블로킹입니다.
 
-```yaml title="api.yaml" showLineNumbers
-openapi: 3.0.1
-info:
-  title: Quizit API
-  version: v1
-servers:
-- url: Quizit
-tags: []
-paths:
-  /admin/chapter:
-    post:
-      tags:
-      - admin
-      operationId: 챕터 생성 성공(200)
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/admin-chapter-650774478'
-            examples:
-              챕터 생성 성공(200):
-                value: |-
-                  {
-                    "description" : "description",
-                    "document" : "document",
-                    "courseId" : "test",
-                    "image" : "image",
-                    "index" : 1
-                  }
-      responses:
-        "200":
-          description: "200"
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/admin-chapter-id-715247309'
-              examples:
-                챕터 생성 성공(200):
-                  value: |-
-                    {
-                      "id" : "test",
-                      "description" : "description",
-                      "document" : "document",
-                      "courseId" : "test",
-                      "image" : "image",
-                      "index" : 1
-                    }
-  ...
-```
-
-테스트가 성공적으로 완료되면 위처럼 OpenAPI 문서인 `api.yaml`이 생성됩니다.
-이 문서와 Swagger만 있다면 언제든지 Swagger UI로 API 명세서를 볼 수 있습니다.
-
-## CI / CD
-
-이제 API 명세서를 생성하는 것까지 자동화가 되었습니다.
-하지만 실제로 API 명세서를 제일 많이 필요로 하는 프론트엔드 팀원도 결국은 API 명세를 보기 위해 어떻게든 로컬에서 테스트 코드를 돌리거나 Swagger를 구해야한다는 과정을 거쳐야합니다.
-이러한 불필요한 과정을 없애기 위해 Kubernetes 클러스터에 프론트엔드 팀원이 접속할 수 있는 Swagger도 함께 구동시켰습니다.
-또한 백엔드가 업데이트 될 때, API 명세서에도 변경 사항이 바로 반영되도록 CI / CD 파이프라인을 활용했습니다.
-
-```groovy title="Jenkinsfile" showLineNumbers {}
-pipeline{
-    agent {
-        ...
-    }
-
-    stages{
-        stage('Build') {
-            steps {
-                container('gradle') {
-                    sh('mkdir ./src/main/resources/static')
-                    sh('mkdir ./src/main/resources/static/docs')
-                    sh('gradle build')
-                    sh('mv ./build/libs/quiz-service.jar ./')
-                }
-            }
-        }
-
-        stage('Update API Specification'){
-            steps{
-                container('aws'){
-                    sh "aws s3 cp src/main/resources/static/docs/api.yml s3://quizit-swagger/quiz.yml"
-                }
-            }
-        }
-        ...
-    }
+```js title="index.js" showLineNumbers
+const func = () => {
+  console.log("시작");
+  axios.get("/user/1")
+       .then((response) => {
+         console.log(response.data)
+       })
 }
+
+func()
 ```
 
-이미 구성된 CI 파이프라인에 생성된 OpenAPI 문서를 객체 스토리지인 AWS S3에 저장하는 스테이지을 추가했습니다.
-이후 Swagger가 OpenAPI 문서인 객체 URL을 참조하도록 설정합니다.
+`await`을 사용해도 인터프리터가 계속해서 실행될 수 있는 이유는 `await`이 내부적으로 `await` 아래의 코드들이 위 코드처럼 프로미스 체인 내부로 들어가는 것과 유사하게 작동하기 때문입니다.
 
-이렇게 문서화하는 과정을 완전히 자동화하는데 성공했습니다.
+## 비동기 & 블로킹
 
-# 마치며
+비동기 및 블로킹 방식은 요청과 응답이 동시에 처리되지 않음에도 그 사이에 다른 작업을 수행할 수 없습니다.
+사실상 비동기의 장점이 없어지는 사용할 이유가 없는 방식이기도 합니다.
 
-지금까지 Spring REST Docs와 Swagger를 함께 사용한 문서화 경험을 공유해보았습니다.
-확실히 Spring REST Docs와 Swagger를 함께 도입하니 협업 관점에서 도움을 굉장히 많이 얻은 것 같습니다.
-역시 협업에서는 문서화가 굉장히 중요한데, 앞서 설명한 방식을 도입해서 원활한 문서화 경험을 겪어보시길 바랍니다.
+## 비동기 & 논블로킹
+
+비동기 및 논블로킹 방식은 요청과 응답이 동시에 처리되지도 않으며, 요청과 응답 사이에 다른 작업을 수행할 수 있습니다.
+
+```js title="index.js" showLineNumbers
+console.log("시작")
+setTimeout(() => console.log("setTimeout() 종료"), 3000)
+console.log("종료")
+```
+```console
+시작
+종료
+setTimeout() 종료
+```
+
+앞서 보았던 예시 중 `setTimeout()`의 예시가 비동기 및 논블로킹 방식으로 작동합니다.
+`setTimeout()`의 호출과 종료가 동시에 처리되지도 않으며, 그 사이에 아래 줄이 수행되는 것을 보아 다른 작업도 수행할 수 있음을 확인할 수 있습니다.

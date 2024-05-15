@@ -1,19 +1,23 @@
 ---
-title: GitOps 환경에서의 Jenkins
+title: Kubernetes에서의 Jenkins
 description: Jenkins를 이용한 GitOps 기반 CI 파이프라인 구축
 date: 2024-03-05
 tags: [Kubernetes, DevOps, Jenkins]
 ---
-이번에 사이드 프로젝트에서 Kubernetes 환경에서 CI / CD 파이프라인을 구축하게 되었습니다.
-그 중 CI 파이프라인을 구축하는데 Jenkins를 사용하기로 했었습니다.
-여기서 제가 GitOps 기반으로 Jenkins CI 파이프라인을 구축한 경험을 공유해 드리려고 합니다.
+이번 글은 GitOps 기반 Jenkins CI 파이프라인 구축에 대한 글입니다.
+
+<br /><br />
+
+이번에 Kubernetes를 다루면서 코드형 인프라(Infrastructure as Code, IaC)의 장점을 더 살리기 위해 GitOps를 채택했는데요.
+GitOps는 DevOps의 확장 개념으로, 배포와 운영에 관련된 코드들을 Git에서 관리하는 것을 의미합니다.
+이 GitOps의 CI / CD 파이프라인에서 CI 파이프라인은 Jenkins를 통해 구축해보기로 했습니다.
 
 # Jenkins 설치
 
 우선 Jenkins를 클러스터 내에 구동해야 했습니다.
-이때 사용하는 방법으로는 Helm을 사용하기로 했습니다.
-그 이유는 Jenkins와 관련된 파드, 서비스, 인그레스 등을 수동으로 배포하고 관리하기는 힘들다고 생각했기 때문입니다.
-Helm을 사용하면 다른 복잡한 요소 상관없이 `values.yaml`만 잘 수정해서 배포하면 됩니다.
+하지만 Jenkins와 관련된 Pod, Service, Ingress 등을 수동으로 배포하고 관리하기는 힘들다고 생각했습니다.
+그래서 Helm을 사용하기로 했는데요.
+각 벤더(Vendor)에서 만들어준 Helm 차트를 기반으로 `values.yaml`만 잘 수정해서 배포하면 됩니다.
 
 ```console
 > helm repo add jenkins https://charts.jenkins.io
@@ -25,7 +29,7 @@ Hang tight while we grab the latest from your chart repositories...
 Update Complete. ⎈Happy Helming!⎈
 ```
 
-Jenkins 차트를 가져오기 위해 Helm Repository를 추가합니다.
+Jenkins 차트를 가져오기 위해 Helm 레포지토리를 추가합니다.
 
 ```console
 > helm show values jenkins/jenkins > jenkins-values.yaml
@@ -33,7 +37,7 @@ Jenkins 차트를 가져오기 위해 Helm Repository를 추가합니다.
 
 그 다음, Jenkins 차트에 설정할 `jenkins-values.yaml`을 가져옵니다.
 
-```yaml title="jenkins-values.yaml"
+```yaml title="jenkins-values.yaml" showLineNumbers
 contoller:
   runAsUser: 0
   containerSecurityContext:
@@ -48,12 +52,12 @@ persistence:
   existingClaim: jenkins-pvc
 ```
 
-`jenkins-values.yaml`에서 위 부분만 값을 수정합니다.
-인그레스를 Root 권한으로 실행할 것이며 이미 존재하는 `PersistenceVolumeClaim`을 사용할 것입니다.
-또한 `/jenkins`를 Prefix로 가지는 인그레스를 생성할 것이므로 이에 맞게 `jenkinsUriPrefix`도 수정해줍니다.
-인그레스는 제가 사전에 배포한 `NodePort` 타입의 Nginx Ingress Controller에 설정됩니다.
+`jenkins-values.yaml`에서 일부분만 값을 수정했습니다.
+Ingress를 Root 권한으로 실행하고 이미 존재하는 `PersistenceVolumeClaim`을 사용하도록 했습니다.
+또한 `/jenkins`를 Prefix로 가지는 Ingress를 생성할 것이므로, 이에 맞게 `jenkinsUriPrefix`도 수정해줍니다.
+Ingress는 제가 사전에 배포한 `NodePort` 타입의 Nginx Ingress Controller에 설정됩니다.
 
-```yaml title="jenkins-volume.yaml"
+```yaml title="jenkins-volume.yaml" showLineNumbers
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -81,7 +85,7 @@ spec:
     path: /var/jenkins
 ```
 
-이번 프로젝트에서 사용하는 Kubernetes는 AWS EKS(Elastic Kubernetes Service) 등의 Managed Kubernetes가 아니므로 Block Storage를 프로비저닝할 Storage Class를 사용하기는 어렵습니다.
+제가 사용하는 Kubernetes는 AWS EKS(Elastic Kubernetes Service) 등의 Managed Kubernetes가 아니므로 Block Storage를 프로비저닝할 Storage Class를 사용하기는 어렵습니다.
 그래서 우선은 임시적으로 `hostPath` 타입의 Persistence Volume과 Persistence Volume Claim을 정의했습니다.
 이후에 워커 노드가 많아진다면 NFS(Network File System) 등의 대안을 선택해야 합니다.
 
@@ -113,7 +117,7 @@ https://jenkins.io/projects/jcasc/
 NOTE: Consider using a custom image with pre-installed plugins
 ```
 
-이제 `jenkins-values.yaml`을 통해 Jenkins 차트를 배포합니다.
+이제 `jenkins-values.yaml`을 통해 Jenkins를 배포합니다.
 
 ```console
 > kubectl get all -n jenkins
@@ -165,7 +169,7 @@ Jenkins에서는 GitHub나 Docker에 접근해야하는 경우가 있는데, 이
 
 ![](4.png)
 
-CI 파이프라인은 GitHub Repository에 커밋이 발생한 이후에 수행되도록 할 것이므로 WebHook이 필요합니다.
+CI 파이프라인은 GitHub 레포지토리에 커밋이 발생한 이후에 수행되도록 할 것이므로 WebHook이 필요합니다.
 그래서 사용할 GitHub Webhook과 괸련된 플러그인들을 설치합니다.
 
 # Job 생성
@@ -174,13 +178,13 @@ CI 파이프라인은 GitHub Repository에 커밋이 발생한 이후에 수행�
 
 ![](5.png)
 
-앞서 설명했듯이, GitHub Repository의 변경 사항을 감지하고 Job을 수행하도록 하기 위해 Build Trigger로 GitHub Hook Trigger를 선택합니다.
+앞서 설명했듯이, GitHub 레포지토리의 변경 사항을 감지하고 Job을 수행하도록 하기 위해 Build Trigger로 GitHub Hook Trigger를 선택합니다.
 
 ![](6.png)
 
-그 다음 Repository URL, GitHub Credential, 브랜치를 설정합니다.
-이렇게 되면 Pipeline Script로 Repository 내부에 있는 `Jenkinsfile`을 사용하게 됩니다.
-Job에서 수행되는 파이프라인은 Repository 내의 `Jenkinsfile`에 정의하면 됩니다.
+그 다음 레포지토리 URL, GitHub Credential, 브랜치를 설정합니다.
+이렇게 되면 Pipeline Script로 레포지토리 내부에 있는 `Jenkinsfile`을 사용하게 됩니다.
+Job에서 수행되는 파이프라인은 레포지토리 내의 `Jenkinsfile`에 정의하면 됩니다.
 
 # Jib 설정
 
@@ -188,21 +192,23 @@ Job에서 수행되는 파이프라인은 Repository 내의 `Jenkinsfile`에 정
 하지만 이번에는 좀 더 간단하게 Jib를 통해서 Docker나 Kaniko 등의 도구 없이 이미지를 빌드해서 컨테이너 레지스트리에 배포하는 방식을 사용해보겠습니다.
 Jib를 사용하기 위해 간단한 Jib 설정이 필요합니다.
 
-```kotlin title="build.gradle.kts"
+```kotlin title="build.gradle.kts" showLineNumbers
 plugins {
     id("com.google.cloud.tools.jib") version "3.3.1"
+    ...
 }
 
 subprojects {
     apply {
         plugin("com.google.cloud.tools.jib")
+        ...
     }
 }
 ```
 
 위와 같이 Jib 플러그인을 배포할 모든 하위 모듈들에 적용했습니다.
 
-```kotlin title="build.gradle.kts"
+```kotlin title="build.gradle.kts" showLineNumbers
 tasks {
     jib {
         from {
@@ -222,13 +228,13 @@ Jib를 통해 이미지를 빌드하고 컨테이너 레지스트리(DockerHub)�
 ./gradlew :api:jib -Djib.to.tags=<Tag> -Djib.to.auth.username=<Docker Username> -Djib.to.auth.password=<Docker Token>
 ```
 
-이렇게 Jib는 커맨드 한 줄로 이미지 빌드부터 배포까지 빠르게 수행할 수 있다는 장점이 있습니다.
+이렇게 Jib는 커맨드 한 줄로 이미지 빌드부터 배포까지 쉽게 수행할 수 있다는 장점이 있습니다.
 
 # Helm 차트 생성
 
 Jenkins가 새로운 이미지를 배포한 후에 클러스터에 변경 사항을 반영해야 합니다.
-해당 프로젝트에서는 CD 도구로 ArgoCD를 사용할 것이므로 Jenkins가 이미지 태그를 수정할 Helm 차트가 있어야 합니다.
-Helm 차트는 GitHub Repository를 생성해 관리하게 됩니다.
+해당 프로젝트에서는 CD 도구로 ArgoCD를 사용할 것이므로 Jenkins가 이미지 태그를 수정할 Helm 차트가 있어야 하는데요.
+Helm 차트는 GitHub에서 레포지토리를 생성해 관리하게 됩니다.
 
 ```console
 helm create doyoumate
@@ -240,7 +246,7 @@ Chart.yaml  charts  templates  values.yaml
 
 Helm을 통해 차트를 생성하면 위와 같은 디렉토리가 생기게 됩니다.
 
-```yaml title="deployment.yaml"
+```yaml title="deployment.yaml" showLineNumbers
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -270,11 +276,11 @@ spec:
       imagePullSecrets:
       - name: docker-secret
 ```
-`templates`에 디플로이먼트, 서비스, 인그레스 등에 대한 Manifest들을 작성합니다.
-구체적인 값들은 `values.yaml`에서 주입받도록 했습니다.
+
+`templates`에 Deployment, Service, Ingress 등에 대한 매니페스트(Manifest)를 작성합니다.
 위와 같이 `values.yaml`에 있는 값은 매니페스트에서 `{{ .Values.<Key> }}` 형태로 참조할 수 있습니다.
 
-```yaml title="values.yaml"
+```yaml title="values.yaml" showLineNumbers
 env: dev
 controller:
   api:
@@ -321,18 +327,17 @@ db:
 ingress:
   name: doyoumate-ingress
   className: nginx
-  annotations:
 ```
 
 `values.yaml`에는 `templates` 내의 매니페스트들에 설정될 값들을 정의하면 됩니다.
 이런 식으로 차트를 구성하면 이미지가 변경될 때 간단하게 `values.yaml`에 있는 이미지 태그들만 변경하면 됩니다.
-이후에 차트를 기반으로 서비스를 배포하는 것은 ArgoCD의 몫입니다.
+이후, 차트를 기반으로 애플리케이션을 배포하는 것은 Jenkins가 아닌 ArgoCD의 역할입니다.
 
 # 파이프라인
 
 이제 모든 준비가 끝났으니 `Jenkinsfile`에 지금까지의 CI 파이프라인을 작성할 차례입니다.
 
-```groovy showLineNumbers
+```groovy title="Jenkinsfile" showLineNumbers
 pipeline {
     agent {
         kubernetes {
@@ -358,7 +363,7 @@ pipeline {
 우선 차트 레포지토리 내의 이미지 태그를 변경하기 위해 YAML 형식의 파일에서 값을 조작할 수 있는 `yq`를 사용합니다.
 `yq` 컨테이너는 Jenkins Agent Pod에 포함되어 배포됩니다.
 
-```groovy showLineNumbers
+```groovy title="Jenkinsfile" showLineNumbers
 stage('Git clone') {
     steps {
         git(
@@ -375,7 +380,7 @@ stage('Git clone') {
 
 첫 번째 스테이지는 서비스 레포지토리를 가져와 이미지 태그를 커밋 Id로 정의하는 스테이지입니다.
 
-```groovy showLineNumbers
+```groovy title="Jenkinsfile" showLineNumbers
 stage('Build and deploy image') {
     steps {
         script {
@@ -391,7 +396,7 @@ stage('Build and deploy image') {
 두 번째 스테이지는 Jib를 통해 이미지를 빌드하고 컨테이너 레지스트리인 DockerHub에 배포하는 스테이지입니다.
 여기서 사용할 이미지 태그는 첫 번째 스테이지에서 정의한 커밋 Id입니다.
 
-```groovy showLineNumbers
+```groovy title="Jenkinsfile" showLineNumbers
 stage('Edit manifests') {
     steps {
         container('yq') {
@@ -424,7 +429,7 @@ stage('Edit manifests') {
 ```
 
 마지막 스테이지는 차트 레포지토리의 이미지 태그를 수정하는 스테이지입니다.
-이 스테이지가 사실상 GitOps에서만 볼 수 있는 특별한 스테이지라 생각합니다.
+이 스테이지가 GitOps에서만 볼 수 있는 특별한 스테이지라 생각합니다.
 
 <br /><br />
 
@@ -518,7 +523,7 @@ pipeline {
 }
 ```
 
-Jenkins가 테스트를 돌리면 VM의 메모리를 초과해 워커 노드가 계속해서 중단되는 문제를 겪었습니다.
+Jenkins가 테스트를 돌리면 VM의 메모리를 초과해 워커 노드가 계속해서 중단되는 문제를 겪었는데요.
 그래서 임시적으로 테스트는 주석 처리 해놓았습니다.
 
 # 결과 확인
@@ -530,9 +535,3 @@ Jenkins가 테스트를 돌리면 VM의 메모리를 초과해 워커 노드가 
 ![](8.png)
 
 Jenkins가 차트 레포지토리에서 이미지 태그를 변경하는 것까지도 확인 할 수 있습니다.
-
-# 마치며
-
-지금까지 GitOps 환경에서 Jenkins로 CI 파이프라인을 구축한 경험을 공유해보았습니다.
-직접 GitOps 기반 CI 파이프라인을 처음부터 끝까지 구축해보니 생각보다 재밌다는 느낌을 많이 받았었습니다.
-저처럼 DevOps에 관심이 많으시다면 한번 쯤은 단순히 VM에 배포하는 것이 아닌 Kubernetes 환경에서 CI 파이프라인을 구축해보는 것도 좋다고 생각합니다.

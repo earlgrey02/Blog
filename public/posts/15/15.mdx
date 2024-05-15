@@ -1,0 +1,335 @@
+---
+title: Java에서의 비동기 처리
+description: Thread와 Future, CompletableFuture
+date: 2024-05-01
+tags: [Java]
+---
+이번 글은 Java에서의 여러 비동기 처리 구현 방법들에 대한 글입니다.
+
+# 비동기
+
+비동기는 요청한 작업에 대한 결과를 기다리지 않도록 처리하는 것을 의미합니다.
+비동기 처리를 통해 요청 후 다른 작업을 수행할 수도 있으므로 동시성 프로그래밍도 가능합니다.
+Java에서는 멀티 스레딩(Multi Threading)을 통해 비동기 작업을 수행합니다.
+
+# Thread & Runnable
+
+Java에서는 `Thread`와 `Runnable`를 통해 새로운 스레드에 비동기 작업을 할당할 수 있습니다.
+
+```java title="Runnable.java" showLineNumbers
+@FunctionalInterface
+public interface Runnable {
+    public abstract void run();
+}
+```
+
+`Runnable`은 함수형 인터페이스 중 하나로, 반환 값이 존재하지 않으므로 비동기 작업의 결과를 가져올 수는 없습니다.
+
+```java title="Main.java" showLineNumbers
+class Main {
+    public static void main(String[] args) {
+        Instant start = Instant.now();
+        Runnable runnable = () -> {
+            try {
+                System.out.printf("[%s] 작업 시작\n", Thread.currentThread().getName());
+                Thread.sleep(3000);
+                System.out.printf("[%s] 작업 종료\n", Thread.currentThread().getName());
+            }
+            catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        };
+        Thread thread = new Thread(runnable);
+
+        thread.start();
+
+        System.out.printf("실행 시간: %ds\n", Duration.between(start, Instant.now()).getSeconds());
+    }
+}
+```
+```console
+[Thread-0] 작업 시작
+실행 시간: 0s
+[Thread-0] 작업 종료
+```
+
+위 코드에서 `Runnable`의 작업은 비동기적으로 수행되어 작업이 종료되기 전에 실행 시간이 먼저 출력된 것을 확인할 수 있습니다.
+
+```java title="Main.java" showLineNumbers {17}
+class Main {
+    public static void main(String[] args) throws InterruptedException {
+        Instant start = Instant.now();
+        Runnable runnable = () -> {
+            try {
+                System.out.printf("[%s] 작업 시작\n", Thread.currentThread().getName());
+                Thread.sleep(3000);
+                System.out.printf("[%s] 작업 종료\n", Thread.currentThread().getName());
+            }
+            catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        };
+        Thread thread = new Thread(runnable);
+
+        thread.start();
+        thread.join();
+
+        System.out.printf("실행 시간: %ds\n", Duration.between(start, Instant.now()).getSeconds());
+    }
+}
+```
+```console
+[Thread-0] 작업 시작
+[Thread-0] 작업 종료
+실행 시간: 3s
+```
+
+이때, `join()`을 사용하면 해당 비동기 작업이 끝날때까지 `main` 스레드가 블로킹됩니다.
+
+## Thread & Runnable의 단점
+
+`Thread`와 `Runnable`로 구현한 비동기 작업은 결과를 가져올 수 없다는 단점을 가지고 있습니다.
+또한 저수준의 `Thread`를 다루다보니 관리가 어렵다는 단점도 있습니다.
+이러한 단점들을 보완해서 나온 비동기 처리 방법이 `Callable`과 `Future`입니다.
+
+# Callable & Future
+
+```java title="Callable.java" showLineNumbers
+@FunctionalInterface
+public interface Callable<V> {
+    V call() throws Exception;
+}
+```
+
+`Callable`은 `Runnable`과 달리 비동기 작업의 결과를 가져올 수 있도록 설계된 함수형 인터페이스입니다.
+실제 비동기 작업의 결과는 `Future`에 감싸져 반환됩니다.
+
+```java title="Future.java" showLineNumbers
+public interface Future<V> {
+    boolean cancel(boolean mayInterruptIfRunning);
+
+    boolean isCancelled();
+
+    boolean isDone();
+
+    V get() throws InterruptedException, ExecutionException;
+
+    V get(long timeout, TimeUnit unit)
+        throws InterruptedException, ExecutionException, TimeoutException;
+}
+```
+
+`Future`는 비동기 작업의 처리 결과를 다루는데 사용됩니다.
+`isDone()`을 통해 비동기 작업의 완료 여부를 확인할 수도 있으며, `get()`을 통해 블로킹 방식으로 처리 결과를 가져올 수도 있습니다.
+
+```java title="ExecutorService.java" showLineNumbers
+public interface ExecutorService extends Executor {
+    <T> Future<T> submit(Callable<T> task);
+
+    <T> Future<T> submit(Runnable task, T result);
+}
+```
+
+`Callable`을 실행시켜 `Future`를 얻기 위해서는 `ExecutorService`가 필요합니다.
+`ExecutorService`는 `Runnable`과 `Callable`을 스레드에 할당하고 실행해주는 역할을 수행합니다.
+단순히 새로운 스레드를 생성하는 `Thread`와 달리 `ExecutorService`는 스레드를 만들어놓고 재사용할 수 있는 스레드 풀(Thread Pool)을 사용합니다.
+`ExecutorService`의 구현체로는 스레드 풀을 사용하는 `ThreadPoolExecutor`, 포크조인 풀(Fork-join Pool)을 사용하는 `ForkJoinPool` 등이 있습니다.
+
+```java title="Main.java" showLineNumbers
+class Main {
+    public static void main(String[] args) {
+        Instant start = Instant.now();
+        ExecutorService executorService = Executors.newFixedThreadPool(3);
+        Callable<Integer> callable = () -> {
+            try {
+                System.out.printf("[%s] 작업 시작\n", Thread.currentThread().getName());
+                Thread.sleep(3000);
+                System.out.printf("[%s] 작업 종료\n", Thread.currentThread().getName());
+
+                return 1;
+            }
+            catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        };
+
+        executorService.submit(callable);
+        System.out.printf("실행 시간: %ds\n", Duration.between(start, Instant.now()).getSeconds());
+        executorService.shutdown();
+    }
+}
+```
+```console
+[pool-1-thread-1] 작업 시작
+실행 시간: 0s
+[pool-1-thread-1] 작업 종료
+```
+
+위 코드에서 `Thread`와 `Runnable`처럼 `Callable`의 작업은 비동기적으로 수행되어 작업이 종료되기 전에 실행 시간이 먼저 출력된 것을 확인할 수 있습니다.
+`Callable`을 스레드에 할당할 `ExecutorService`는 `Executors`의 팩토리 메서드로 가져옵니다.
+처리 결과를 가져오고 싶다면 `submit()`이 반환하는 `Future`를 사용해야 합니다.
+
+```java title="Main.java" showLineNumbers
+class Main {
+    public static void main(String[] args) throws InterruptedException, ExecutionException {
+        Instant start = Instant.now();
+        ExecutorService executorService = Executors.newFixedThreadPool(3);
+        Callable<Integer> callable = () -> {
+            try {
+                System.out.printf("[%s] 작업 시작\n", Thread.currentThread().getName());
+                Thread.sleep(3000);
+                System.out.printf("[%s] 작업 종료\n", Thread.currentThread().getName());
+
+                return 1;
+            }
+            catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        };
+
+        Future<Integer> future = executorService.submit(callable);
+        System.out.println(future.get());
+        System.out.printf("실행 시간: %ds\n", Duration.between(start, Instant.now()).getSeconds());
+    }
+}
+```
+```console
+[pool-1-thread-1] 작업 시작
+[pool-1-thread-1] 작업 종료
+1
+실행 시간: 3s
+```
+
+`Future`의 `get()`은 비동기 작업이 완료될 때까지 스레드를 블로킹하다가 작업이 완료되면 결과를 반환합니다.
+
+## Callable & Future의 단점
+
+`Future`는 비동기 작업 처리 결과에 대해 추가적인 처리를 하기 위해서는 반드시 블로킹 호출인 `get()`을 사용해 결과를 가져와야 한다는 단점이 있습니다.
+또한 여러 비동기 작업을 조합하는데도 어려움을 가지고 있습니다.
+이러한 단점들을 보완해서 나온 비동기 처리 방법이 `CompletableFuture`입니다.
+
+# CompletableFuture
+
+`CompletableFuture`는 `Future`를 개선한 방식으로 등장한 비동기 처리 방법 중 하나입니다.
+
+```java title="Main.java" showLineNumbers
+class Main {
+    public static void main(String[] args) throws ExecutionException, InterruptedException {
+        CompletableFuture<Integer> completableFuture = CompletableFuture.supplyAsync(() -> {
+            try {
+                System.out.printf("[%s] 작업 시작\n", Thread.currentThread().getName());
+                Thread.sleep(3000);
+                System.out.printf("[%s] 작업 종료\n", Thread.currentThread().getName());
+
+                return 1;
+            }
+            catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }).thenApply(n -> {
+            try {
+                System.out.printf("[%s] 후처리 시작\n", Thread.currentThread().getName());
+                Thread.sleep(3000);
+                System.out.printf("[%s] 후처리 종료\n", Thread.currentThread().getName());
+
+                return n + 1;
+            }
+            catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+
+        });
+
+        Thread.sleep(10000);
+    }
+}
+```
+```console
+[ForkJoinPool.commonPool-worker-1] 작업 시작
+[ForkJoinPool.commonPool-worker-1] 작업 종료
+[ForkJoinPool.commonPool-worker-1] 후처리 시작
+[ForkJoinPool.commonPool-worker-1] 후처리 종료
+```
+
+`Future`와 달리 `CompletableFuture`를 생성하기만 해도 비동기 작업이 시작됩니다.
+또한 비동기 작업의 결과를 후처리하는 작업도 비동기 처리가 가능합니다.
+기본적으로 `ForkJoinPool`을 사용해서 비동기 작업을 처리하며, 다른 스레드 풀을 사용하고 싶다면 `ExecutorService`를 추가로 전달해주면 됩니다.
+
+```java title="Main.java" showLineNumbers
+class Main {
+    public static void main(String[] args) throws ExecutionException, InterruptedException {
+        Instant start = Instant.now();
+        CompletableFuture<Integer> completableFuture1 = CompletableFuture.supplyAsync(() -> {
+            try {
+                System.out.printf("[%s] 1 작업 시작\n", Thread.currentThread().getName());
+                Thread.sleep(3000);
+                System.out.printf("[%s] 1 작업 종료\n", Thread.currentThread().getName());
+
+                return 1;
+            }
+            catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        });
+
+        CompletableFuture<Integer> completableFuture2 = CompletableFuture.supplyAsync(() -> {
+            try {
+                System.out.printf("[%s] 2 작업 시작\n", Thread.currentThread().getName());
+                Thread.sleep(3000);
+                System.out.printf("[%s] 2 작업 종료\n", Thread.currentThread().getName());
+
+                return 1;
+            }
+            catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        });
+
+        completableFuture1.thenCombine(completableFuture2, Integer::sum)
+                          .thenAccept(System.out::println)
+                          .get();
+
+        System.out.printf("실행 시간: %ds\n", Duration.between(start, Instant.now()).getSeconds());
+    }
+}
+```
+```console
+[ForkJoinPool.commonPool-worker-1] 1 작업 시작
+[ForkJoinPool.commonPool-worker-2] 2 작업 시작
+[ForkJoinPool.commonPool-worker-2] 2 작업 종료
+[ForkJoinPool.commonPool-worker-1] 1 작업 종료
+2
+실행 시간: 3s
+```
+
+또한 여러 비동기 작업을 결합해서 처리할 수도 있습니다.
+하지만 `Future`와 마찬가지로 `get()`을 호출하면 비동기 작업이 모두 완료될 때까지 블로킹이 발생합니다.
+
+```java title="Main.java" showLineNumbers
+class Main {
+    public static void main(String[] args) throws ExecutionException, InterruptedException {
+        CompletableFuture<Integer> completableFuture =
+                CompletableFuture.supplyAsync(() -> {
+                                     System.out.printf("[%s] 작업 시작\n", Thread.currentThread().getName());
+                                     if (true)
+                                         throw new RuntimeException();
+                                     System.out.printf("[%s] 작업 종료\n", Thread.currentThread().getName());
+
+                                     return 1;
+                                 })
+                                 .exceptionally(ex -> {
+                                     System.out.printf("[%s] 예외 처리\n", Thread.currentThread().getName());
+
+                                     return 1;
+                                 });
+
+        completableFuture.get();
+    }
+}
+```
+```console
+[ForkJoinPool.commonPool-worker-1] 작업 시작
+[ForkJoinPool.commonPool-worker-1] 예외 처리
+```
+
+`CompletableFuture`는 `Future`와 달리 예외 처리 API도 가지고 있어서 유연하게 예외를 처리할 수 있습니다.

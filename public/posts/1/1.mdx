@@ -1,12 +1,16 @@
 ---
-title: Spring WebFlux 환경에서의 로깅
-description: 리액티브 프로그래밍 환경에서 로깅 및 로그 추적 구현
+title: Spring WebFlux에서의 로깅
+description: 리액티브 프로그래밍 환경에서의 로깅 및 로그 추적 구현
 date: 2024-04-02
 tags: [Kotlin, Spring, Spring WebFlux]
 ---
-이번 사이드 프로젝트에서 Spring WebFlux 기반으로 백엔드를 개발하게 되었습니다.
-여기서 저는 서비스에서 발생하는 HTTP 요청 및 응답을 모니터링 하기 위해 로깅을 설정하고 싶었습니다.
-그래서 Spring WebFlux 환경에서 수동으로 로깅 및 로그 추적을 구현한 경험을 공유해 드리려고 합니다.
+이번 글은 Spring WebFlux에서 자체적으로 구현한 로깅(Logging) 및 로그 추적에 대한 글입니다.
+
+<br /><br />
+
+로그는 시스템에 있어서 중요한 역할을 가지고 있습니다.
+로그들을 수집해서 문제를 해결하거나 사용자의 행동을 분석하는 등의 많은 작업을 수행할 수 있습니다.
+이러한 점에서 저는 서비스에서 발생하는 HTTP 요청 및 응답을 모니터링 하기 위해 로깅을 설정하고 싶었습니다.
 
 # 프로퍼티 설정을 통한 로깅
 
@@ -17,20 +21,21 @@ logging:
 ```
 
 사실 Spring Boot에서는 간단하게 프로퍼티만 설정해도 요청 및 응답을 로그로 확인할 수 있습니다.
-하지만 이 방법은 원치 않는 로그들도 보여진다는 단점이 있습니다.
 
 ```console
 2024-04-02 14:34:25.657 DEBUG [reactor-http-epoll-4] o.s.w.r.f.s.s.RouterFunctionMapping: [2b5e844f-985] Mapped to org.springframework.web.reactive.function.server.HandlerFilterFunction$$Lambda$2224/0x00007f8cf4aa21b0@43585181
 ```
 
 하지만 위와 같이 라우터에서의 핸들러 매핑 등의 정보도 함께 로깅되는데 이러한 내용들은 로그로 수집할 필요가 없는 내용들이라고 생각했습니다.
-또한 일반적으로 프로덕션 환경에서는 Info 레벨까지 로깅을 수행하는 것이 원칙입니다.
-이러한 이유들로 인해 자체적으로 로깅을 구현하기로 결정했습니다.
+또한 일반적으로 프로덕션 환경에서는 Info 레벨까지 로깅을 수행하는 것이 원칙인데요.
+이러한 이유들로 인해 저는 자체적으로 로깅을 구현하기로 결정했습니다.
 
 # Spring AOP
 
 보통 Spring에서 로깅을 자체적으로 구현한다면 AOP(Aspect Oriented Programming)를 사용하는 예시가 가장 대표적입니다.
-Spring에서는 AOP를 지원하는 Spring AOP를 사용할 수 있습니다.
+AOP란 핵심적인 기능으로부터 부가적인 기능을 분리해 모듈화하는 프로그래밍 기법 중 하나입니다.
+여기서 로깅은 부가적인 기능 중 하나이므로 AOP의 모듈화 대상이 되는데요.
+그러므로 로깅은 횡단 관심사인 애스펙트(Aspect)가 되며, 로깅의 대상이 되는 지점이 포인트컷(Pointcut)이 됩니다.
 
 ```kotlin title="PostRouter.kt" showLineNumbers
 @Router
@@ -55,7 +60,7 @@ class PostHandler(
 }
 ```
 
-저희는 Spring WebFlux의 함수형 엔드포인트 방식을 통해 API를 구현해왔습니다.
+앞서, 현재 API는 Spring WebFlux의 함수형 엔드포인트 방식을 기반으로 구현되어 있습니다.
 
 ```java title="RouterFunctions.java" showLineNumbers
 public abstract class RouterFunctions {
@@ -77,7 +82,47 @@ public interface HandlerFunction<T extends ServerResponse> {
 ```
 
 실제 요청과 응답은 `HandlerFunction<ServerResponse>`의 인자와 리턴 값인 `ServerRequest`와 `Mono<ServerResponse>`가 됩니다.
-그래서 AOP를 적용한다면 Pointcut을 핸들러의 메서드 실행 시점으로 지정하면 됩니다.
+그러므로 포인트컷은 핸들러의 메서드 실행 시점이 됩니다.
+
+```kotlin title="Handler.kt" showLineNumbers
+@Target(AnnotationTarget.CLASS)
+@Retention(AnnotationRetention.RUNTIME)
+@Component
+annotation class Handler
+```
+
+포인트컷을 핸들러로 지정하기 위해 포인트컷 표현식에 사용할 `@Handler`를 구현했습니다.
+이렇게 되면 `@within` 지시자를 사용할 수 있습니다.
+
+```kotlin title="LoggingAspect.kt" showLineNumber
+fun around(joinPoint: ProceedingJoinPoint): Mono<*> =
+    (joinPoint.args.first() as ServerRequest)
+        .let { request ->
+            request.bodyToMono<String>()
+                .defaultIfEmpty("")
+                .doOnNext {
+                    logger.info {
+                        "HTTP ${request.method()} ${request.uri().run { "$path${query?.let { "?$it" } ?: ""}" }} ${
+                            it.replace(Regex("[ \\n]"), "")
+                                .replace(",", ", ")
+                                .trim()
+                        }"
+                    }
+                }
+                .flatMap {
+                    (joinPoint.proceed(arrayOf(request)) as Mono<*>)
+                        .doOnNext { logger.info { "HTTP ${(it as ServerResponse).statusCode()}" } }
+                }
+        }
+```
+
+로깅을 수행하는 어드바이스(Advice)는 위와 같이 구현했습니다.
+우선 `joinPoint.args.first()`를 통해 인자로 주어진 `ServerRequest`를 가져와서 요청에 대한 로깅을 수행합니다.
+그 다음, `joinPoint.proceed(arrayOf(it))`에서 반환된 `Mono<ServerResponse>`를 통해 응답에 대한 로깅을 수행하도록 했습니다.
+
+<br /><br />
+
+최종적인 애스펙트는 다음과 같습니다.
 
 ```kotlin title="LoggingAspect.kt" showLineNumbers
 @Aspect
@@ -107,20 +152,15 @@ class LoggingAspect {
             }
 }
 ```
-
-핸들러 계층에 로깅에 대한 AOP를 적용하는 Aspect는 위와 같이 구현할 수 있습니다.
-우선 `joinPoint.args.first()`를 통해 인자로 주어진 `ServerRequest`를 가져와서 요청에 대한 로깅을 수행합니다.
-그 다음, `joinPoint.proceed(arrayOf(it))`에서 반환된 `Mono<ServerResponse>`를 통해 응답에 대한 로깅을 수행하면 됩니다.
-
 ```console
 2024-04-02 22:54:35.557 INFO [reactor-http-nio-3] c.d.c.a.LoggingAspect: HTTP POST /auth/login {"studentId":"2021101015", "password":"root"}
 ```
 
-그렇게 로그를 확인하는데 API가 정상적으로 응답을 반환하지 않는 문제가 발생했었습니다.
+그렇게 출력된 로그를 확인하는데 API가 정상적으로 요청을 처리하지 못하는 문제를 확인했습니다.
 
 ## BodyToMono
 
-문제의 원인은 Asepct에서 Request Body를 가져오는 과정에 있었습니다.
+문제의 원인은 어드바이스(Advice)에서 Request Body를 가져오는 과정에 있었습니다.
 
 ```java title="ServerRequest.java" showLineNumbers /Mono<T>/
 public interface ServerRequest {
@@ -128,9 +168,9 @@ public interface ServerRequest {
 }
 ```
 
-`ServerRequest`에서 Request Body는 `bodyToMono()`를 통해 가져와야 합니다.
-여기서 `bodyToMono()`는 단순히 Request Body를 반환하는 것이 아닌 Request Body를 발행하는 Publisher인 `Mono<T>`를 반환하게 됩니다.
-`Mono<T>`는 1개의 데이터만 발행하는 Publisher이므로 한번 구독을 통해 값을 발행받으면 그 이후로는 더 이상 값을 받을 수 없습니다.
+`ServerRequest`에서 Request Body는 `bodyToMono()`를 통해 가져오게 됩니다.
+여기서 `bodyToMono()`는 단순히 Request Body를 반환하는 것이 아닌 Request Body를 발행하는 `Publisher`의 구현체인 `Mono<T>`를 반환하게 됩니다.
+`Mono<T>`는 1개의 데이터만 발행하는 단일 요소 스트림이므로 한번 구독을 통해 값을 발행받으면 그 이후로는 더 이상 값을 받을 수 없습니다.
 
 ```kotlin title="LoggingAspect.kt" showLineNumbers /bodyToMono<String>()/
 @Aspect
@@ -174,8 +214,10 @@ class AuthenticationHandler(
 }
 ```
 
-앞서 `LoggingAspect`에서 `bodyToMono()`를 통해 Request Body를 읽었으니 그 다음 핸들러 계층에서 호출되는 `bodyToMono()`로 얻은 `Mono<T>`는 더 이상 값을 발행하지 못합니다.
-그렇게 핸들러 계층에서 Request Body를 제대로 읽지 못해 응답이 정상적으로 반환되지 못했던 것입니다.
+앞서, `LoggingAspect`에서 `bodyToMono()`를 통해 얻은 `Mono<T>`를 구독해 값을 발행받았으니, 그 다음 핸들러 계층에서 호출되는 `bodyToMono()`로 얻은 `Mono<T>`는 더 이상 값을 발행하지 않습니다.
+그렇게 핸들러 계층에서 Request Body를 제대로 읽지 못해 요청이 정상적으로 처리되지 못했던 것인데요.
+그래서 생각한 방법은 기존의 `ServerRequest`의 Request Body를 읽고 해당 Request Body를 가진 `ServerRequest`를 새로 만들어서 핸들러에게 전달하는 방법이었습니다.
+당연히 `bodyToMono()`가 반환하는 `Mono<T>`도 새로운 `Mono<T>`이므로 핸들러 계층에서 Request Body를 다시 읽을 수 있게 됩니다.
 
 ```java title="ServerRequest.java" showLineNumbers
 public interface ServerRequest {
@@ -185,9 +227,7 @@ public interface ServerRequest {
 }
 ```
 
-그래서 생각한 방법은 기존의 `ServerRequest`의 Request Body를 읽고 해당 Request Body를 가진 `ServerRequest`를 새로 만들어서 핸들러에게 전달하는 방법이었습니다.
-당연히 `bodyToMono()`가 반환하는 `Mono<T>`도 새로운 `Mono<T>`이므로 핸들러 계층에서 Request Body를 다시 읽을 수 있게 됩니다.
-새로운 `ServerRequest`는 `ServerRequest.Builder`를 통해 생성하면 됩니다.
+새로운 `ServerRequest`는 `ServerRequest.Builder`를 통해 생성할 수 있습니다.
 
 ```java title="DefaultServerRequestBuilder.java" showLineNumbers
 class DefaultServerRequestBuilder implements ServerRequest.Builder {
@@ -205,12 +245,12 @@ class DefaultServerRequestBuilder implements ServerRequest.Builder {
 }
 ```
 
-마침 기존의 `ServerRequest`에서 Request Body를 수정하는 `DefaultServerRequestBuilder`가 있었습니다.
-새로운 Request Body는 위와 같이 String 타입의 JSON 문자열 형태로 받을 수 있습니다.
+`ServerRequest.Builder`의 구현체인 `DefaultServerRequestBuilder`에는 Request Body를 새로 생성하는 `body()`가 있습니다.
+`body()`는 `String` 타입의 JSON 문자열을 통해 새로운 Request Body를 설정합니다.
 
 <br /><br />
 
-수정한 코드는 다음과 같습니다.
+그렇게 수정한 코드는 다음과 같습니다.
 
 ```kotlin title="LoggingAspect.kt" showLineNumbers {21-25}
 @Aspect
@@ -246,14 +286,14 @@ class LoggingAspect {
 }
 ```
 
-`bodyToMono()`로부터 가져온 Request Body와 기존의 `ServerRequest`를 사용해 새로운 `ServerRequest`를 생성해줍니다.
+`bodyToMono()`로부터 가져온 Request Body와 기존의 `ServerRequest`를 통해 새로운 `ServerRequest`를 생성하도록 했습니다.
 
 ```console
 2024-04-04 15:44:24.594 INFO [reactor-http-nio-3] c.d.c.a.LoggingAspect: HTTP POST /auth/login {"studentId":"2021101015", "password":"root"}
 2024-04-04 15:44:24.832 INFO [reactor-http-nio-3] c.d.c.a.LoggingAspect: HTTP 200 OK
 ```
 
-그 결과, 정상적으로 로그가 출력되는 것을 확인 할 수 있었습니다.
+그 결과, 정상적으로 요청이 처리되어 로그가 출력되는 것을 확인 할 수 있었습니다.
 
 ```console
 2024-04-04 15:46:29.444 INFO [reactor-http-nio-3] c.d.c.a.LoggingAspect: HTTP POST /auth/login {"studentId":"2021101015", "password":"rooot"}
@@ -261,7 +301,7 @@ class LoggingAspect {
 2024-04-04 15:46:29.560 ERROR [nioEventLoopGroup-3-3] c.d.c.e.GlobalExceptionHandler: PasswordNotMatchedException at com.doyoumate.api.auth.service.AuthenticationService.login(AuthenticationService.kt:92)
 ```
 
-하지만 예외가 발생할 때, 상태 코드가 반영되지 못하는 문제가 발생했습니다.
+하지만 예외가 발생할 때, 로그에 상태 코드가 반영되지 못하는 문제가 발생했습니다.
 
 # 예외 처리
 
@@ -276,12 +316,12 @@ class PostHandler(
 }
 ```
 
-저희는 핸들러 계층에서 `ServerResponse.ok()`를 통해 항상 `200 OK`를 반환하도록 구현했습니다.
+저는 모든 API에서 `ServerResponse.ok()`를 통해 `ServerResponse`가 `200 OK`의 상태를 가지도록 구현해왔는데요.
 
 ![](1.png)
 
 그렇다고 예외가 발생했을 때도 `200 OK`를 반환하는 것은 아닙니다.
-저희는 예외 처리를 핸들러 계층이 아닌 다른 계층에서 수행하도록 구현했기 때문입니다.
+예외 처리를 핸들러 계층이 아닌 다른 계층에서 수행하도록 구현했기 때문입니다.
 
 ```kotlin title="GlobalExceptionHandler.kt" showLineNumbers
 @Configuration
@@ -309,9 +349,12 @@ class GlobalExceptionHandler(
 
 예외 처리는 `ErrorWebExceptionHandler`의 구현체인 `GlobalExceptionHandler`를 통해 수행됩니다.
 그래서 `200 OK`의 상태 코드를 가진 `ServerResponse`는 예외가 발생하면 `GlobalExceptionHandler`에 의해 해당 예외에 맞는 상태 코드와 Response Body를 가진 응답으로 변환됩니다.
-문제는 이 예외 처리는 핸들러 계층 외부이므로 핸들러 계층에 적용한 로깅 AOP가 적용되지 않는다는 점입니다.
-그래서 어떤 상황이든 로깅은 `200 OK`의 상태 코드를 가진 `ServerResponse`에 대해 수행됩니다.
-그렇다고 핸들러 계층에서 예외 처리를 수행하도록 하는 것은 핸들러 계층의 책임이 너무 커지고 불필요하게 코드의 중복이 발생한다고 생각했습니다.
+
+<br /><br />
+
+문제는 이 예외 처리는 핸들러 계층 외부이므로 핸들러에 적용한 애스펙트가 적용되지 않는다는 점입니다.
+그래서 로깅은 핸들러가 반환하는 `200 OK`의 상태 코드를 가진 `ServerResponse`에 대해서만 수행됩니다.
+그렇다고 핸들러 계층에서 예외 처리를 수행하도록 하는 것은 핸들러 계층의 책임이 너무 커지고 불필요하게 코드의 중복이 발생하게 된다고 생각했습니다.
 
 ## WebFilter
 
@@ -325,7 +368,7 @@ public interface WebFilter {
 }
 ```
 
-`WebFilter`는 Spring Web의 `Filter`와 비슷한 역할을 가지고 있습니다.
+`WebFilter`는 서블릿(Servlet)의 `Filter`와 비슷한 역할을 수행합니다.
 
 ```java title="DefaultWebFilterChain.java" showLineNumbers
 public class DefaultWebFilterChain implements WebFilterChain {
@@ -339,9 +382,9 @@ public class DefaultWebFilterChain implements WebFilterChain {
 }
 ```
 
-`ApplicationContext`에 등록된 `WebFilter`들은 `DefaultWebFilterChain`의 `filter()`에 의해 호출됩니다.
+Bean으로 등록된 `WebFilter`들은 `DefaultWebFilterChain`의 `filter()`에 의해 호출됩니다.
 중요한 점은 이 과정들이 `DispatcherHandler`가 엔드포인트에 맞는 핸들러를 매핑하기 전에 수행된다는 점입니다.
-그래서 `WebFilter`에서는 `ServerHttpRequest`나 `ServerHttpResponse` 등의 저수준의 요청 및 응답을 다룰 수 있습니다.
+그래서 `WebFilter`는 `ServerHttpRequest`나 `ServerHttpResponse` 등의 저수준의 요청 및 응답을 다루기 용이합니다.
 
 ```kotlin title="LoggingFilter.kt" showLineNumbers
 class LoggingFilter : WebFilter {
@@ -349,9 +392,7 @@ class LoggingFilter : WebFilter {
 
     override fun filter(exchange: ServerWebExchange, chain: WebFilterChain): Mono<Void> =
         exchange.log()
-            .flatMap {
-                chain.filter(it)
-            }
+            .flatMap { chain.filter(it) }
 
     private fun ServerWebExchange.log(): Mono<ServerWebExchange> =
         request.bodyToByteArray()
@@ -376,7 +417,7 @@ class LoggingFilter : WebFilter {
 
     private fun ServerHttpRequest.bodyToByteArray(): Mono<ByteArray> =
         DataBufferUtils
-            .join(this.body)
+            .join(body)
             .map { buffer ->
                 ByteArray(buffer.readableByteCount())
                     .also { DataBufferUtils.release(buffer.read(it)) }
@@ -404,12 +445,12 @@ class LoggingFilter : WebFilter {
 }
 ```
 
-`WebFilter`에서 요청 로깅은 AOP 방식처럼 구현하고 응답 로깅을 저수준의 `ServerHttpResponse`를 통해 구현하기로 했습니다.
+`WebFilter`에서 요청 로깅은 기존의 AOP 방식처럼 구현하고 응답 로깅을 저수준의 `ServerHttpResponse`를 통해 구현하기로 했습니다.
 
-```kotlin showLineNumbers
+```kotlin showLineNumbers {6, 8}
 private fun ServerHttpRequest.bodyToByteArray(): Mono<ByteArray> =
     DataBufferUtils
-        .join(this.body)
+        .join(body)
         .map { buffer ->
             ByteArray(buffer.readableByteCount())
                 .also { DataBufferUtils.release(buffer.read(it)) }
@@ -417,8 +458,16 @@ private fun ServerHttpRequest.bodyToByteArray(): Mono<ByteArray> =
         .defaultIfEmpty(ByteArray(0))
 ```
 
-`ServerHttpRequest`의 경우, `ServerResponse`와 달리 Request Body를 버퍼를 통해 다루게 됩니다.
-당연히 이전처럼 핸들러 계층에서 Request Body를 다시 읽을 수 있도록 `ServerWebExchange`의 `mutate()`를 통해 새로운 `ServerHttpRequest`를 전달해야 합니다.
+`ServerHttpRequest`의 경우, `ServerResponse`와 달리 `DataBuffer`를 통해 Request Body를 다루게 됩니다.
+주의해야 할 점은 Request Body가 비어있는 경우, `join()`이 `Mono.empty()`를 반환한다는 점인데요.
+이렇게 되면 `Mono.empty()`로 인해 다운 스트림이 전부 실행되지 않게 됩니다.
+그래서 `defaultIfEmpty()`를 사용해 크기가 0인 `ByteArray`를 기본 값으로 설정해주었습니다.
+
+<br /><br />
+
+또한 버퍼(Buffer)의 경우, 사용한 후에 `release()`를 호출하지 않으면 해당 버퍼는 남은 레퍼런스 카운트(Reference Count)에 의해 가비지 컬렉션(Garbage Collection)의 대상이 되지 않는데요.
+이는 메모리 누수로 이어질 수 있으므로 반드시 `release()`를 통해 버퍼를 해제해줘야 합니다.
+위 코드에서는 `DataBufferUtils`의 `release()`를 사용했습니다.
 
 ```kotlin showLineNumbers {6-12}
 private fun ServerWebExchange.log(): Mono<ServerWebExchange> =
@@ -443,7 +492,8 @@ private fun ServerWebExchange.log(): Mono<ServerWebExchange> =
         }
 ```
 
-새로운 `ServerHttpRequest`는 `ServerHttpRequestDecorator`를 통해 생성할 수 있습니다.
+당연히 이전처럼 핸들러 계층에서 Request Body를 다시 읽을 수 있도록 `mutate()`를 통해 `ServerWebExchange`에 새로운 `ServerHttpRequest`를 설정해야 합니다.
+이때, `ServerHttpRequestDecorator`를 통해 기존의 `ServerHttpRequest`의 `getBody()`를 새로 정의한 `ServerHttpRequest`를 생성했습니다.
 
 ```kotlin showLineNumbers {13-18}
 private fun ServerWebExchange.log(): Mono<ServerWebExchange> =
@@ -473,8 +523,8 @@ public interface ReactiveHttpOutputMessage extends HttpMessage {
 }
 ```
 
-응답에 대해서는 `beforeCommit()`을 통해 `ServerHttpResponse`가 커밋되기 전에 로깅이 수행되도록 구현합니다.
-커밋되는 시점은 예외 처리를 포함한 모든 작업이 수행된 후의 응답이 반환되는 시점이므로 최종적인 응답에 대해 로깅을 할 수 있게 됩니다.
+응답 로깅의 경우, `beforeCommit()`을 통해 `ServerHttpResponse`가 커밋되기 전에 로깅이 수행되도록 구현합니다.
+커밋되는 시점은 예외 처리를 포함한 모든 작업이 수행된 후의 응답이 반환되는 시점이므로 최종적인 응답에 대해 로깅을 수행할 수 있게 됩니다.
 
 ```console
 2024-04-04 17:32:31.313 INFO [reactor-http-nio-3] c.d.c.l.LoggingFilter: HTTP POST /auth/login {"studentId":"2021101015", "password":"rooot"}
@@ -482,7 +532,7 @@ public interface ReactiveHttpOutputMessage extends HttpMessage {
 2024-04-04 17:32:31.396 INFO [nioEventLoopGroup-3-3] c.d.c.l.LoggingFilter: HTTP 403 FORBIDDEN
 ```
 
-이전과 달리 `GlobalExceptionHandler`에 의해 변환된 응답도 로그에 반영된 것을 볼 수 있습니다.
+이전과 달리 `GlobalExceptionHandler`에 의해 변환된 응답도 로그에 반영된 것을 확인할 수 있었습니다.
 
 # 로그 추적
 
@@ -495,11 +545,8 @@ public interface ReactiveHttpOutputMessage extends HttpMessage {
 ```
 
 제가 구현한 로그에서 아쉬운 점이 하나 있었습니다.
-많은 로그가 뒤섞이면서 어떤 요청과 응답이 하나의 HTTP 통신인지 알기 어렵다는 것입니다.
+많은 로그가 뒤섞이면서 어떤 요청과 응답이 하나의 통신인지 알기 어렵다는 점인데요.
 그래서 로그를 추적하기 쉽게 요청마다 임의의 식별자를 부여해주는 것을 생각했습니다.
-
-<br /><br />
-
 이렇게 식별자를 이용한 로그 추적에 사용되는 것 중에서는 MDC(Mapped Diagnostic Context)가 있습니다.
 
 # MDC
@@ -511,19 +558,16 @@ Slf4j 구현체들은 기본적으로 MDC를 사용할 수 있도록 구현되�
 
 ## Spring WebFlux에서의 MDC
 
-이 MDC를 Spring WebFlux 환경에서 그냥 사용하기에는 문제가 있습니다.
+이 MDC를 Spring WebFlux 환경에서 그냥 사용하기에는 어려움이 있습니다.
 Spring WebFlux에서는 하나의 리액티브 시퀀스(Reactive Sequence)가 여러 스레드에서 수행될 수 있습니다.
-이로 인해 `ThreadLocal`을 사용하기 어려우므로 MDC를 통한 로그 추적도 어렵습니다.
-
-<br /><br />
-
-그래서 하나의 리액티브 시퀀스에서 공유되는 저장 공간인 Reactor Context를 활용하기로 했습니다.
+이로 인해 스레드에 의존적인 `ThreadLocal`을 사용하기 어려우므로 MDC를 통한 로그 추적도 어렵습니다.
+그래서 스레드가 아닌 리액티브 시퀀스에 종속되는 저장 공간인 Reactor Context를 활용하기로 했습니다.
 
 ## MDC with Reactor Context
 
 Reactor Context도 `Map`처럼 Key-Value 형태를 가지고 있습니다.
 Slf4j 구현체가 MDC를 사용하므로 결국은 MDC에 요청 식별자를 저장해야 합니다.
-그러므로 Reactor Context는 MDC로 로그를 추적하기 어려운 부분인 컨텍스트 스위칭 부분에서 MDC 내의 요청 식별자를 스위칭되는 스레드로 복사해주는 역할을 수행하면 됩니다.
+이때, Reactor Context는 MDC로 로그를 추적하기 어려운 부분인 컨텍스트 스위칭 부분에서 MDC 내의 요청 식별자를 스위칭되는 스레드로 복사해주는 역할을 수행하면 됩니다.
 
 ```kotlin title="MdcFilter.kt" showLineNumbers {4}
 class MdcFilter : WebFilter {
@@ -533,7 +577,7 @@ class MdcFilter : WebFilter {
 }
 ```
 
-`WebFliter`를 통해 요청이 들어오면 `contextWriter()`로 Reactor Context에 `tracdId`로 사용할 임의의 문자열을 저장합니다.
+`WebFliter`를 통해 요청이 들어오면 `contextWrite()`로 Reactor Context에 식별자로 사용할 임의의 문자열을 저장합니다.
 
 ```kotlin title="MdcContextLifter.kt" showLineNumbers {21-24}
 class MdcContextLifter<T>(private val coreSubscriber: CoreSubscriber<T>) : CoreSubscriber<T> {
@@ -563,8 +607,9 @@ class MdcContextLifter<T>(private val coreSubscriber: CoreSubscriber<T>) : CoreS
 }
 ```
 
-그 다음, 현재 Reactor Context와 MDC를 동기화하는 `MdcContextLifter`를 구현합니다.
-리액티브 시퀀스가 진행될 때마다 `onNext()`가 호출되어 현재 Reactor Context 내의 `traceId`를 MDC로 복사합니다.
+그 다음, 현재 Reactor Context 내의 식별자와 MDC 내의 식별자를 동기화하는 `MdcContextLifter`를 구현합니다.
+Reactor Hook을 통해 `CoreSubscriber<T>`의 구현체인 `MdcContextLifter`가 리액티브 시퀀스가 진행될 때마다 호출되어 Reactor Context 내의 `traceId`를 MDC로 복사하도록 할 것입니다.
+
 
 ```kotlin title="MdcConfiguration.kt" showLineNumbers
 @Configuration
@@ -572,13 +617,12 @@ class MdcConfiguration {
     private val mdcContextKey = MdcConfiguration::class.java.name
 
     @PostConstruct
-    fun contextOperatorHook() {
-        Hooks.onEachOperator(
-            mdcContextKey, Operators.lift { _, subscriber -> MdcContextLifter(subscriber) })
+    fun registerHook() {
+        Hooks.onEachOperator(mdcContextKey, Operators.lift { _, subscriber -> MdcContextLifter(subscriber) })
     }
 
     @PreDestroy
-    fun cleanupHook() {
+    fun cleanHook() {
         Hooks.resetOnEachOperator(mdcContextKey)
     }
 
@@ -591,9 +635,8 @@ class MdcConfiguration {
 }
 ```
 
-마지막으로 지금까지 구현한 `WebFilter`들과 `MdcContextLifter`를 등록해줍니다.
-`MdcContextLifter`는 Reactor Hook을 통해 리액티브 연산자마다 호출되도록 했습니다.
-추가로 `@Order`를 통해 `MdcFilter`가 `DefaultWebFilterChain`에서 제일 처음으로 호출되도록 합니다.
+마지막으로 지금까지 구현한 `WebFilter`들과 `MdcContextLifter`를 설정해줍니다.
+`MdcFilter`의 경우, `@Order`를 통해 `DefaultWebFilterChain`에서 제일 처음으로 호출되도록 했습니다.
 
 ```console
 2024-04-04 17:58:03.514 INFO [reactor-http-nio-3] c.d.c.l.LoggingFilter: [d1375571] HTTP POST /auth/login {"studentId":"2021101015", "password":"rooot"}
@@ -604,8 +647,3 @@ class MdcConfiguration {
 ```
 
 이전 로그들과 달리 식별자가 앞에 붙어 로그 추적이 쉬워진 것을 볼 수 있습니다.
-
-# 마치며
-
-지금까지 Spring WebFlux와 같은 멀티 스레드 환경에서 로깅을 구현한 경험을 공유해보았습니다.
-이렇게 자체적인 로깅을 구현하면 Info 레벨에서의 웹 계층 로깅을 구현할 수도 있고 특정 요청(Health Check 등)들은 로깅하지 않도록 설정할 수도 있어서 좋다고 생각합니다.

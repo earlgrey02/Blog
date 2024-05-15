@@ -1,31 +1,34 @@
 ---
-title: Spring Batch를 활용한 외부 데이터 동기화
-description: Spring Batch를 통해 주기적으로 데이터를 동기화하기
+title: Spring Batch와 Kubernetes의 CronJob을 통한 배치 작업 구현
+description: 배치 작업을 활용한 외부 API의 성능 문제 극복
 date: 2024-01-25
-tags: [Kotlin, Spring, Spring Batch]
+tags: [Kotlin, Spring, Spring Batch, Kubernetes]
 ---
-이번에 사이드 프로젝트에서 백엔드를 개발하면서 외부 API를 사용하게 되었습니다.
-구현할 여러 기능 중 하나인 강의 검색 기능은 학교 API를 이용해 기존에 존재하는 학교 사이트의 강의 검색 기능의 속도나 편의를 개선해서 만들고자 했습니다.
-여기서 Spring Batch를 사용한 경험을 공유해 드리려고 합니다.
+이번 글은 Spring Batch와 Kubernetes의 CronJob을 통한 배치 작업에 대한 글입니다.
 
-# 외부 API 호출의 단점
+<br /><br />
+
+서비스를 개발하다 보면 외부 API를 사용하는 경우가 빈번하게 존재합니다.
+물론 서비스마다 외부 API를 사용하는 빈도는 다 다르지만, 제가 개발하는 서비스에서는 외부 API 통신이 많은 편이었습니다.
 
 ![](1.png)
 
-Spring Batch를 사용하게 된 이유는 학교 API의 지연 시간 때문이었습니다.
-학교 API는 지연 시간이 긴 편이며 요청과 응답이 모두 XML 형식이며 직렬화하는 과정도 복잡했었습니다.
-이렇게 되면 아무리 저희가 성능 최적화를 수행해도 외부 API에 의존하는 이상 성능이 안좋아질 수 밖에 없다고 생각했습니다.
+문제는 제가 사용하는 외부 API인 학교 API가 지연 시간이 긴 편이며 요청과 응답이 대부분 복잡하고 용량이 큰 XML이라는 점인데요.
+이렇게 되면 아무리 저희가 성능 최적화를 수행해도 학교 API에 의존하는 이상 성능이 안좋아질 수 밖에 없다고 생각했습니다.
+그래서 주기적으로 학교 API로부터 데이터를 가져와 데이터베이스에 저장하기로 했습니다.
+이러면 기존의 학교 API를 사용하는 부분에서 지연 시간이 짧은 서버 데이터베이스를 사용할 수 있게 됩니다.
 
-<br/><br/>
+<br /><br />
 
-그래서 주기적으로 학교 API로부터 가져온 데이터들과 백엔드 데이터베이스의 데이터들을 동기화해 지연 시간이 짧은 서버 데이터베이스를 통해 기능을 제공하기로 했습니다.
+일반적으로 이런 상황에서 사용되는 것이 배치(Batch)입니다.
+배치 작업은 주기적으로 데이터를 처리하는 작업을 의미합니다.
+
+# Spring Batch with Kubernetes
+
+배치 작업을 구현하는데에는 Spring Batch와 Kubernetes의 CronJob을 사용합니다.
+외부 API로부터 가져온 데이터들을 데이터베이스를 저장하는 작업을 Spring Batch를 통해 구현하고, 해당 작업을 Kubernetes의 CronJob을 통해 주기적으로 수행하면 됩니다.
 
 # Spring Batch
-
-그래서 Spring Batch로 학교 데이터베이스와 서버 데이터베이스를 동기화하는 배치 작업을 정의하기로 했습니다.
-그리고 Spring Scheduler를 통해 이 작업을 주기적으로 실행시키기로 했습니다.
-
-# Spring Batch 설정
 
 ```yaml title="application.yaml" showLineNumbers
 spring:
@@ -36,28 +39,20 @@ spring:
     driverClassName: org.h2.Driver
 ```
 
-Spring Batch에서는 배치 작업을 관리하는 메타 데이터를 저장할 공간이 필요합니다.
-이에 대해서는 임시적으로 H2를 사용하기로 했습니다.
+우선 Spring Batch를 사용하기 위해서는 배치 작업을 관리하는 메타 데이터를 저장할 공간이 필요합니다.
+이에 대해서는 임시적으로 인메모리(In-Memory) DB인 H2를 사용하기로 했습니다.
 
-```kotlin title="BatchConfiguration.kt" showLineNumbers {1}
-@EnableScheduling
-@Configuration
-class BatchConfiguration
-```
+# Step
 
-또한 배치 작업에 스케줄링을 적용하기 위해 `@EnableScheduling`을 등록한 `BatchConfiguration`을 구현했습니다.
+Spring Batch에서 `Step`은 `Job`을 구성하는 하나의 단계로, 실제로 수행되는 작업을 정의합니다.
+이때, `Step`은 청크(Chunk)나 Tasklet을 기반으로 구현됩니다.
+Tasklet 기반 배치는 `Step`을 하나의 메서드로 한번에 처리하는 반면, 청크 기반 배치는 `Step`을 `read()`, `process()`, `write()`로 구성해 설정한 `chunk` 수만큼 데이터를 묶어 처리합니다.
+즉, `chunk`가 5인 경우 `ItemReader`와 `ItemProcessor`가 데이터를 각각 1개씩 읽고 처리한 후 5개를 모아서 `ItemWriter`에 한번에 전달합니다.
 
-# Step 구현
+<br /><br />
 
-Spring Batch에서 `Step`은 Chunk나 Tasklet을 기반으로 구현할 수 있습니다.
-Tasklet 기반 배치는 `Step`을 하나의 메서드로 한번에 처리하는 반면, Chunk 기반 배치는 `Step`을 `read()`, `process()`, `write()`로 구성해 설정한 `chunk` 수만큼 데이터를 묶어 처리합니다.
-즉, `chunk`가 5인 경우 `ItemReader`와 `ItemProcessor`가 데이터를 각각 1개씩 읽고 처리한 후 5개를 `ItemWriter`에 한번에 전달합니다.
-
-<br/><br/>
-
-학교 API에는 각 연도와 학기 별로 강의들을 조회하는 방법 밖에 없으므로 Chunk 기반 배치를 사용한다면 `chunk`를 1로 설정하게 됩니다.
-그러므로 Chunk 기반 배치가 아닌 Tasklet 기반 배치를 사용해도 성능 차이가 없습니다.
-그렇지만 Chunk 기반 배치 구현이 어려운 것이 아니므로 Chunk 기반 배치를 통해 `Step`을 구현해 보았습니다.
+학교 API에는 강의들을 각 연도와 학기 별로 조회하는 방법 밖에 없으므로 청크 기반 배치가 아닌 Tasklet 기반 배치를 사용해도 큰 성능 차이는 없습니다.
+그렇지만 청크 기반 배치가 좀 더 가독성이 좋다고 생각해 청크 기반으로 `Step`을 구현해 보았습니다.
 
 ```java title="ItemReader.java" showLineNumbers
 @FunctionalInterface
@@ -72,8 +67,8 @@ public interface ItemWriter<T> {
 }
 ```
 
-우선 `Step`을 구성할 `ItemReader`와 `ItemWriter`를 구현합니다.
-추가적인 후처리가 필요하지 않으므로 `ItemProcessor`는 구현하지 않았습니다.
+우선 `Step`을 구성할 `ItemReader`와 `ItemWriter`를 구현해야 합니다.
+조회 및 저장 외의 복잡한 처리가 필요하지 않으므로 `ItemProcessor`는 구현하지 않았습니다.
 
 ```kotlin title="SynchronizeLecturesReader.kt" showLineNumbers
 class SynchronizeLecturesReader(
@@ -97,7 +92,7 @@ class SynchronizeLecturesReader(
 `SynchronizeLecturesReader`는 각 연도와 학기를 순회하며 학교 API로부터 강의들을 조회합니다.
 `ItemReader`는 `read()`에서 `null`을 반환하면 조회 작업을 종료합니다.
 
-```kotlin title="SynchronizeLecturesWriter.kt" showLineNumbers
+```kotlin title="SynchronizeLecturesWriter.kt" showLineNumbers {7}
 class SynchronizeLecturesWriter(
     private val lectureRepository: LectureRepository
 ) : ItemWriter<Flux<Lecture>> {
@@ -109,9 +104,9 @@ class SynchronizeLecturesWriter(
 }
 ```
 
-`SynchronizeLecturesWriter`는 조회한 모든 강의들을 데이터베이스에 저장합니다.
-Spring Batch는 아직까진 공식적으로 리액티브 프로그래밍을 지원하지 않으므로 Spring WebFlux 환경에서 Spring Batch를 사용할 때는 `block()`을 통해 스레드를 블로킹(Blocking)해야 합니다.
-그렇지 않으면 모든 값들을 구독한 채로 배치 스레드가 종료되어 작업이 완료되지 못합니다.
+`SynchronizeLecturesWriter`는 조회한 강의들을 데이터베이스에 저장합니다.
+Spring Batch는 아직까진 리액티브 프로그래밍을 지원하지 않으므로 Spring WebFlux 환경에서 Spring Batch를 사용할 때는 `block()`을 통해 스레드를 블로킹(Blocking)해야 합니다.
+그렇지 않으면 모든 스트림을 구독한 채로 배치 스레드가 종료되어 작업이 완료되지 못합니다.
 
 ```kotlin title="LectureBatchConfiguration.kt" showLineNumbers
 @JobScope
@@ -135,15 +130,12 @@ fun synchronizeLecturesWriter(): ItemWriter<Flux<Lecture>> =
 ```
 
 앞서 정의한 `SynchronizeLecturesReader`와 `SynchronizeLecturesWriter`를 Bean으로 등록한 후 `Step`을 정의합니다.
-
-<br/><br/>
-
 이때, `@JobScope`와 `@StepScope`는 해당 Bean의 생성 시점을 자신을 포함한 `Job`과 `Step`이 생성되는 시점으로 미루도록 해줍니다.
-사용하는 이유는 추후에 `JobParameter`를 Late Binding하기 위해 사용하거나 배치 작업을 병렬로 수행할때 각각의 작업들이 독립적으로 수행되도록 하기 위해 사용합니다.
+사용하는 이유는 추후에 `JobParameter`를 지연 바인딩(Late Binding)하기 위해 사용하거나 배치 작업을 병렬로 수행할 때 각각의 작업들이 독립적으로 수행되도록 하기 위해 사용합니다.
 
-# Job 구현
+# Job
 
-```kotlin title="LectureBatchConfiguration.kt" showLineNumbers
+```kotlin title="LectureBatchConfiguration.kt" showLineNumbers {4}
 @Bean
 fun synchronizeLecturesJob(): Job =
     JobBuilder("synchronizeLecturesJob", jobRepository)
@@ -153,7 +145,7 @@ fun synchronizeLecturesJob(): Job =
 
 마지막으로 `SynchronizeLecturesStep`을 `Step`으로 가지는 `SynchronizeLecturesJob`을 Bean으로 등록합니다.
 
-# Batch 실행
+# 배치 실행
 
 ```console
 2024-01-25 13:47:21.851 INFO [main] o.s.b.c.l.s.SimpleJobLauncher: Job: [SimpleJob: [name=synchronizeLecturesJob]] launched with the following parameters: [{}]
@@ -161,61 +153,93 @@ fun synchronizeLecturesJob(): Job =
 2024-01-25 13:47:50.287 INFO [main] o.s.b.c.l.s.SimpleJobLauncher: Job: [SimpleJob: [name=synchronizeLecturesJob]] completed with the following parameters: [{}] and the following status: [COMPLETED] in 28s426ms
 ```
 
-애플리케이션을 시작하면 내부적으로 `JobLauncherApplicationRunner`가 `JobLauncher`를 통해 `SynchronizeLecturesJob`을 실행하게 됩니다.
-
-# Batch Scheduling
-
-저희는 구현한 배치 작업을 애플리케이션 시작 시점이 아닌 특정 시점에 주기적으로 실행할 예정입니다.
-`@Scheduled`와 Cron 표현식을 사용하면 특정 시점에 주기적으로 메서드를 실행할 수 있습니다.
+애플리케이션을 시작하면 `JobLauncherApplicationRunner`가 `JobLauncher`를 통해 `SynchronizeLecturesJob`을 실행하게 됩니다.
 
 ```yaml title="application.yaml" showLineNumbers
 spring:
   batch:
     job:
-      enabled: false
+      name: ${JOB}
 ```
 
-우선 애플리케이션이 시작될 때 `JobLauncherApplicationRunner`에 의해 배치 작업이 실행되는 것을 비활성화 합니다.
+배치 작업이 여러 개인 경우, 애플리케이션 시작 시에 수행할 `Job`을 환경 변수로 정의할 수 있도록 했습니다.
 
-```kotlin title="BatchUtil.kt" showLineNumbers
-private fun createJobParameters(): JobParameters =
-    hashMapOf<String, JobParameter<*>>()
-        .apply {
-            put("time", JobParameter(Date().time, Long::class.java))
-        }
-        .let { JobParameters(it) }
-
-fun JobLauncher.run(job: Job): JobExecution = run(job, createJobParameters())
-```
-
-배치 작업은 `JobLauncher`의 `run()`를 통해 실행시킬 수 있습니다.
-`run()`는 `Job`과 `JobParameters`를 인자로 받는데, 내부적으로 `JobParameters`를 생성하는 부분을 위와 같이 추상화해서 사용했습니다.
-
-```kotlin title="LectureScheduler" showLineNumbers {6}
-@Component
-class LectureScheduler(
-    private val jobLauncher: JobLauncher,
-    private val lectureBatchConfiguration: LectureBatchConfiguration
-) {
-    @Scheduled(cron = "0 0 4 * * *")
-    fun synchronizeLectures() {
-        jobLauncher.run(lectureBatchConfiguration.synchronizeLecturesJob())
-    }
+```kotlin title="BatchApplication.kt" showLineNumbers
+fun main(args: Array<String>) {
+    exitProcess(SpringApplication.exit(runApplication<BatchApplication>(*args)))
 }
 ```
 
-다음으로 매일 새벽 4시마다 `SynchronizeLecturesJob`을 실행하는 `LectureScheduler`를 구현하면 배치 작업이 주기적으로 실행됩니다.
+또한 Kubernetes의 CronJob을 통해 배치 작업을 수행할 예정이므로 배치 작업이 끝나면 종료 코드와 함께 프로세스가 종료되도록 했습니다.
+
+# CronJob
+
+이제 Kubernetes의 CronJob을 통해 해당 배치 작업을 특정 시간에 주기적으로 수행하도록 하겠습니다.
+참고로 현재 인프라에서는 Helm과 ArgoCD를 통해 배포를 진행하고 있는데요.
+그러므로 따로 존재하는 Helm 레포지토리 내에 CronJob에 대한 매니페스트(Manifest)를 작성하도록 하겠습니다.
+
+```yaml title="values.yaml" showLineNumbers
+jobs:
+- name: synchronizeLecturesJob
+  schedule: 0 3 * * *
+- name: synchronizeStudentsJob
+  schedule: 0 3 * * *
+```
+```yaml title="cronjob.yaml" showLineNumbers
+{{- range .Values.jobs }}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ kebabcase .name }}
+spec:
+  schedule: {{ .schedule }}
+  timeZone: 'Asia/Seoul'
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+          - name: {{ $.Values.controller.batch.containerName }}
+            image: {{ $.Values.controller.batch.image.name }}:{{ $.Values.controller.batch.image.tag }}
+            imagePullPolicy: Always
+            env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: {{ $.Values.env }}
+            - name: JOB
+              value: {{ .name }}
+            envFrom:
+            - secretRef:
+                name: {{ $.Values.secret.name }}
+          imagePullSecrets:
+          - name: docker-secret
+---
+{{- end }}
+```
+
+CronJob에서 `schedule`을 통해 Cron 표현식으로 해당 작업을 수행할 시간을 정의할 수 있습니다.
+저는 반복문을 통해 `values.yaml`에서 여러 배치 작업들의 `Job` 이름과 수행할 시간을 받아 CronJob을 생성하도록 구현했습니다.
+
+```console
+> kubectl get job -n doyoumate
+NAME                                COMPLETIONS   DURATION   AGE
+synchronize-lectures-job-28574100   1/1           71s        10h
+synchronize-students-job-28574100   1/1           16m        10h
+```
+
+실제로 CronJob에 의해 특정 시간에 배치 작업이 자동으로 수행된 것을 확인할 수 있습니다.
 
 # Spring Batch with Kotlin DSL
 
-저희는 Spring Batch 코드를 어느정도 개선하고 싶었습니다.
-우선 Chunk 기반 배치의 방식을 가져가면서 코드는 Tasklet 기반 배치처럼 하나의 클래스에 `read()`와 `write()`를 묶고 싶었고, Kotlin DSL을 통해 Spring Batch를 구현하고 싶었습니다.
+저는 추가로 Spring Batch 코드를 개선하고 싶었습니다.
+우선 청크 기반 배치의 방식을 가져가면서 코드는 Tasklet 기반 배치처럼 하나의 클래스에 `read()`와 `write()`를 묶고 싶었고, Kotlin DSL을 통해 Spring Batch를 구현하고 싶었습니다.
 
 ```kotlin title="BatchUtil.kt" showLineNumbers
 interface ItemTasklet<T> : ItemReader<T>, ItemWriter<T>
 ```
 
-첫번째로 `ItemReader`와 `ItemWriter`를 하나의 믹스인(Mixin) 인터페이스인 `ItemTasklet`로 상속합니다.
+우선 `ItemReader`와 `ItemWriter`를 하나의 믹스인(Mixin) 인터페이스인 `ItemTasklet`로 묶었습니다.
 
 ```kotlin title="SynchronizeLecturesTasklet.kt" showLineNumbers
 @StepScope
@@ -245,8 +269,8 @@ class SynchronizeLecturesTasklet(
 }
 ```
 
-그리고 기존의 `SynchronizeLecturesReader`와 `SynchronizeLecturesWriter`를 하나의 `SynchronizeLecturesTasklet`으로 통합합니다.
-이제 이 `ItemTasklet`을 `Step`에 등록하는 Kotlin DSL을 구현하면 됩니다.
+그리고 기존의 `SynchronizeLecturesReader`와 `SynchronizeLecturesWriter`도 하나의 `SynchronizeLecturesTasklet`으로 통합합니다.
+이제 이 `ItemTasklet`을 `Step`에 등록하는 Kotlin DSL을 구현하겠습니다.
 
 ```kotlin title="BatchDsl.kt" showLineNumbers
 fun job(
@@ -308,7 +332,7 @@ class StepDsl<T>(
 }
 ```
 
-저희가 Spring Batch에서 사용하는 최소한의 기능만을 포함한 `JobDsl`과 `StepDsl`을 구현했습니다.
+제가 Spring Batch에서 사용하는 최소한의 기능만을 포함한 `JobDsl`과 `StepDsl`을 구현했습니다.
 구현 방식은 다른 Kotlin DSL을 구현하는 방식과 같습니다.
 
 ```kotlin title="BatchUtil.kt" showLineNumbers {7, 17-29}
@@ -344,7 +368,7 @@ class JobDsl(
 }
 ```
 
-특별히 주의할 점이라면 JobDsl에서 `step()`을 단순하게 `JobBuilder`의 `start()`로 `Step`을 추가하는 방식으로 구현하면 안된다는 점입니다.
+특별히 주의할 점이라면 `JobDsl`에서 `step()`을 단순하게 `JobBuilder`의 `start()`로 `Step`을 추가하는 방식으로 구현하면 안된다는 점입니다.
 그렇게 되면 만약 `Job`이 여러 `Step`으로 구성된다면 마지막으로 추가한 `Step`만 실행됩니다.
 그래서 저는 `step()`을 `MutableList<Step>`에 `Step`을 추가하는 방식으로 구현해 `registerSteps()`에서 모든 `Step`이 `start()`와 `next()`로 추가되도록 구현했습니다.
 
@@ -368,8 +392,3 @@ class LectureBatchConfiguration(
 ```
 
 구현한 Kotlin DSL을 기존 코드에 적용한 모습은 위와 같습니다.
-
-# 마치며
-
-지금까지 Spring Batch를 통해 배치 작업을 구성하는 경험을 공유해보았습니다.
-이렇게 Spring Batch와 Spring Scheduler를 이용하면 Spring에서 주기적인 배치 작업을 쉽게 구현할 수 있습니다.

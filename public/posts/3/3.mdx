@@ -1,317 +1,265 @@
 ---
-title: Reactor에서의 스트림 동기 처리
-description: 외부 API의 성능 문제를 동기 처리를 통해 극복하기
-date: 2024-02-02
-tags: [Kotlin, Reactor]
+title: Spring REST Docs와 Swagger를 함께 사용한 API 문서화
+description: Spring에서의 API 문서화 프로세스 자동화
+date: 2023-11-06
+tags: [Kotlin, Spring]
 ---
-이번에 사이드 프로젝트에서 백엔드를 개발하면서 외부 API를 사용하게 되었습니다.
-외부 API를 사용하는 기능을 구현하는 중 외부 API의 성능 문제가 저희 백엔드로 전이되는 문제를 겪었습니다.
-그 문제를 동기 처리를 통해 해결한 경험을 공유해 드리려고 합니다.
+이번 글은 Spring REST Docs와 Swagger를 통한 API 문서화에 대한 글입니다.
 
-# 외부 API의 성능 문제
+<br /><br />
 
-저희는 학교 API로부터 학생과 학생이 신청한 강의들을 조회해 데이터베이스에 저장하는 배치 작업이 구성했습니다.
+협업을 하면서 빠질 수 없는 요소 중 하나는 문서화입니다.
+그 중 API 문서화는 개발자 간의 소통을 원활하게 하고, API의 변경 사항을 쉽게 전달할 수 있도록 하는데요.
+저는 백엔드 개발자라면 벗어날 수 없는 API 문서화를 편리하게 하는 방법을 모색하고 있었습니다.
 
-```kotlin title="SynchronizeStudentsTasklet.kt" showLineNumbers
-@Tasklet
-class SynchronizeStudentsTasklet(
-    private val customStudentRepository: CustomStudentRepository,
-    private val studentClient: StudentClient,
-    private val lectureClient: LectureClient
-) : ItemTasklet<Mono<Student>> {
-    private val years = (2018..Year.now().value).toList()
-    private var number = 100000
-    private var idx = 0
+# Spring REST Docs
 
-    override fun read(): Mono<Student>? =
-        years.getOrNull(idx)
-            ?.let { year ->
-                if (number >= 102000) {
-                    idx += 1
-                    number = 100000
-                }
+일반적으로 Spring 생태계에서는 문서화 도구로 Swagger와 Spring REST Docs라는 선택지가 있습니다.
+그 중 Spring REST Docs는 컨트롤러 계층의 테스트를 기반으로 API 명세서를 생성해주는 도구입니다.
 
-                "$year${number++}"
-            }
-            ?.let {
-                studentClient.getStudentById(it)
-                    .flatMap { student ->
-                        if (student.status.run { contains("휴학") || contains("졸업") }) {
-                            Mono.just(student)
-                        } else {
-                            Mono.zip(
-                                lectureClient.getAppliedLectureIdsByStudentId(it)
-                                    .collectList(),
-                                lectureClient.getPreAppliedLectureIdsByStudentId(it)
-                                    .collectList()
-                            ).map { (appliedLectureIds, preAppliedLectureIds) ->
-                                student.copy(
-                                    appliedLectureIds = appliedLectureIds.toHashSet(),
-                                    preAppliedLectureIds = preAppliedLectureIds.toHashSet()
-                                )
-                            }
-                        }
-                    }
-            }
+<br /><br />
 
-    override fun write(chunk: Chunk<out Mono<Student>>) {
-        Flux.merge(chunk.items)
-            .flatMap { customStudentRepository.upsert(it) }
-            .collectList()
-            .block()
+저는 코드 커버리지까지 적용해 테스트 코드를 작성하고 있었던 상황이라 Spring REST Docs를 적용해왔습니다.
+Spring REST Docs를 적용하기 용이한 테스트 환경을 구성하기 위해 다음과 같은 과정들을 거쳤습니다.
+
+```kotlin title="ControllerTest.kt" showLineNumbers {12}
+@AutoConfigureRestDocs
+abstract class ControllerTest : DescribeSpec() {
+    @Autowired
+    private lateinit var applicationContext: ApplicationContext
+
+    @Autowired
+    private lateinit var restDocumentation: RestDocumentationContextProvider
+
+    protected val webClient: WebTestClient by lazy {
+        WebTestClient.bindToApplicationContext(applicationContext)
+            .configureClient()
+            .filter(WebTestClientRestDocumentation.documentationConfiguration(restDocumentation))
+            .build()
     }
 }
 ```
 
-배치 작업은 Spring Batch의 `ItemReader`와 `ItemWriter`의 믹스인(Mixin) 인터페이스인 `ItemTasklet`을 사용해서 구현했습니다.
-`read()`에서 학번에 해당하는 학생과 학생이 장바구니에 담은 강의, 신청한 강의들을 가져와 `write()`에서 저장하는 방식으로 배치 작업을 구현했습니다.
+우선 Spring REST Docs가 설정된 환경을 모든 컨트롤러 계층 테스트에 쉽게 적용하기 위해 `ControllerTest`라는 추상 클래스를 구현했습니다.
+`ControllerTest`에서는 `WebTestClientRestDocumentationConfigurer`를 `ExchangeFilterFunction`에 등록한 `WebTestClient`를 가지고 있습니다.
+해당 `WebTestClient`를 사용하는 테스트에서는 Spring REST Docs가 스니펫을 생성할 수 있게 됩니다.
 
-<br/><br/>
+```kotlin title="RestDocsUtil.kt" showLineNumbers
+infix fun String.desc(description: String): FieldDescriptor =
+    PayloadDocumentation.fieldWithPath(this)
+        .description(description)
 
-문제는 계속해서 외부 API와 통신을 하는 부분에서 Timeout이 발생한다는 점입니다.
+infix fun String.paramDesc(description: String): ParameterDescriptor =
+    RequestDocumentation.parameterWithName(this)
+        .description(description)
 
-# 스트림 비동기 처리
-
-```kotlin title="SynchronizeStudentsTasklet.kt" showLineNumbers {2}
-override fun write(chunk: Chunk<out Mono<Student>>) {
-    Flux.merge(chunk.items)
-        .flatMap { customStudentRepository.updateStudent(it) }
-        .collectList()
-        .block()
-}
+fun <T> BodySpec<T, *>.document(
+    identifier: String,
+    vararg snippets: Snippet
+): BodySpec<T, *> =
+    consumeWith(
+        WebTestClientRestDocumentationWrapper.document<T>(
+            identifier,
+            Preprocessors.preprocessRequest(Preprocessors.prettyPrint()),
+            Preprocessors.preprocessResponse(Preprocessors.prettyPrint()),
+            *snippets
+        )
+    )
 ```
 
-모든 학생 데이터가 `chunk.items`에 주어지는데 청크 수를 100으로 설정했으므로 100개의 학생 데이터가 담긴 `List<Mono<T>>`가 주어집니다.
-`List<Mono<T>>`인 `chunk.items`는 `merge()`를 통해 `Flux<T>`로 변환됩니다.
+또한 Kotlin DSL을 통해 문서화 코드를 어느 정도 간소화하였습니다.
 
-![](1.svg)
+```kotlin title="QuizControllerTest.kt" showLineNumbers {20-24}
+@WebFluxTest(QuizRouter::class, QuizHandler::class)
+class QuizControllerTest : ControllerTest() {
+    @MockkBean
+    private lateinit var quizService: QuizService
 
-이때, `merge()`는 인자로 받은 여러 Publisher들을 동시에 구독하여 결합합니다.
-이렇게 되면 `read()`에서 여러 `WebClient` 통신들을 100개씩 비동기적으로 수행합니다.
+    init {
+        describe("getQuizById()는") {
+            context("퀴즈가 존재하는 경우") {
+                every { quizService.getQuizById(any()) } returns createQuizResponse()
+                withMockUser()
 
-<br/><br/>
-
-어느 정도 구식인 학교 API는 이 요청들을 감당하지 못해 매번 Timeout을 발생시켰고, 이를 해결하기 위해서는 어쩔 수 없이 제가 작성한 코드를 건드릴 수밖에 없었습니다.
-
-# WebClient Timeout 설정
-
-```console
-org.springframework.web.reactive.function.client.WebClientRequestException: handshake timed out after 10000ms
-```
-
-우선 로그를 확인한 결과 TLS Handshake 과정에서 Timeout이 발생한 것을 알 수 있습니다.
-
-```kotlin title="WebClientConfiguration.kt" showLineNumbers {6-9}
-@Configuration
-class WebClientConfiguration {
-    @Bean
-    fun webClient(): WebClient =
-        HttpClient.create()
-            .secure {
-                it.sslContext(TcpSslContextSpec.forClient())
-                    .handshakeTimeout(Duration.ofSeconds(60))
+                it("상태 코드 200과 quizResponse를 반환한다.") {
+                    webClient
+                        .get()
+                        .uri("/quiz/{id}", ID)
+                        .exchange()
+                        .expectStatus()
+                        .isOk
+                        .expectBody<QuizResponse>()
+                        .document(
+                            "식별자를 통한 퀴즈 단일 조회 성공(200)",
+                            pathParameters("id" paramDesc "식별자"),
+                            responseFields(quizResponseFields)
+                        )
+                }
             }
-            .let { httpClient ->
-                WebClient.builder()
-                    .clientConnector(ReactorClientHttpConnector(httpClient))
-                    .codecs {
-                        it.defaultCodecs()
-                            .maxInMemorySize(-1)
-                    }
-                    .build()
-            }
-}
-```
-
-그래서 WebClient의 Handshake Timeout을 60초로 설정해보았습니다.
-
-```console
-org.springframework.web.reactive.function.client.WebClientRequestException: connection timed out after 30000 ms
-```
-
-이번에는 Connection Timeout이 발생한 것을 확인했습니다.
-
-```kotlin title="WebClientConfiguration.kt" showLineNumbers {6}
-@Configuration
-class WebClientConfiguration {
-    @Bean
-    fun webClient(): WebClient =
-        HttpClient.create()
-            .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 60000)
-            .secure {
-                it.sslContext(TcpSslContextSpec.forClient())
-                    .handshakeTimeout(Duration.ofSeconds(60))
-            }
-            .let { httpClient ->
-                WebClient.builder()
-                    .clientConnector(ReactorClientHttpConnector(httpClient))
-                    .codecs {
-                        it.defaultCodecs()
-                            .maxInMemorySize(-1)
-                    }
-                    .build()
-            }
-}
-```
-
-그래서 이전의 Handshake Timeout의 경우처럼 WebClient의 Connection Timeout을 60초로 설정해주었습니다.
-
-```console
-java.io.IOException: Operation timed out
-```
-
-다시 Timeout이 발생하는 것을 볼 수 있었습니다.
-저는 이렇게 계속 발생하는 문제를 무작정 Timeout을 늘려서 해결하는 것은 적절하지 않다고 생각했습니다.
-또한 배치 작업이 실행되는 중에는 1분을 넘기는 응답도 존재했었습니다.
-
-<br/><br/>
-
-이렇게 되면 학교 서버에 부하를 주지 않는 방식으로 요청을 보내는 것이 더 효율적일 것이라고 생각했습니다.
-
-# 스트림 동기 처리
-
-이번엔 요청을 보내는 방식을 바꿔보았습니다.
-제일 간단한 방법은 기존의 비동기 방식의 처리를 동기적으로 바꾸는 것입니다.
-
-![](2.svg)
-
-동기 처리를 위해서 사용하는 리액티브 연산자로 `margeSequential()`이 있었습니다.
-
-```kotlin title="SynchronizeStudentsTasklet.kt" showLineNumbers {2}
-override fun write(chunk: Chunk<out Mono<Student>>) {
-    Flux.mergeSequential(chunk.items)
-        .flatMap { customStudentRepository.updateStudent(it) }
-        .collectList()
-        .block()
-}
-```
-
-하지만 결과는 `merge()`을 사용했을 때와 같이 Timeout이 발생했습니다.
-그 이유는 `mergeSequential()`은 단순히 결과의 순서를 보장해주는 것 뿐이지 작업은 `merge()`와 같이 비동기적으로 수행하기 때문이었습니다.
-
-<br/><br/>
-
-저는 다른 방법을 찾는 중에 `concat()`을 찾았습니다.
-
-![concat](3.svg)
-
-`concat()`은 `merge()`와 달리 동기적으로 작동하며 `margeSequential()`처럼 결과의 순서 또한 보장합니다.
-
-```kotlin title="SynchronizeStudentsTasklet.kt" showLineNumbers {2}
-override fun write(chunk: Chunk<out Mono<Student>>) {
-    Flux.concat(chunk.items)
-        .flatMap { customStudentRepository.updateStudent(it) }
-        .collectList()
-        .block()
-}
-```
-
-이렇게 되면 이전 스트림의 값이 발행되고 나서야 다음 스트림의 구독이 시작됩니다.
-
-```console
-2024-02-02 06:02:48.693 INFO [main] o.s.b.c.s.AbstractStep: Step: [synchronizeAppliedLecturesStep] executed in 5m14s824ms
-```
-
-정상적으로 작업이 완료된 것을 볼 수 있습니다.
-
-## 성능 최적화
-
-하지만 `concat()`을 통해 데이터를 하나씩 처리하는 방식은 성능 면에서 좋지 않다고 생각했습니다.
-
-![](4.svg)
-
-이때, `buffer()`를 통해 스트림을 배치 단위로 묶어 처리하는 방법을 생각했습니다.
-`buffer()`는 `Flux<T>`를 `Flux<List<T>>`로 반환합니다.
-묶인 `List<T>` 내의 데이터들은 비동기적으로, `List<T>`들은 기존의 방식처럼 서로 동기적으로 수행되도록 구현합니다.
-
-![](5.svg)
-
-`Flux<Flux<T>>`에 동기 처리를 위해서 `concat()`과 `map()`을 결합한 `concatMap()`을, `Flux<T>`에 비동기 처리를 위해서는 `flatMap()`을 사용합니다.
-
-```kotlin title="SynchronizeAppliedLecturesTasklet.kt" showLineNumbers {3}
-override fun write(chunk: Chunk<out Mono<Student>>) {
-    Flux.merge(chunk.items)
-        .buffer(10)
-        .map { Flux.fromIterable(it) }
-        .concatMap { student ->
-            student.flatMap { customStudentRepository.updateStudent(it) }
         }
-        .collectList()
-        .block()
-}
-```
-
-`buffer()`를 통해 데이터를 10개씩 `List<T>`에 담아 `Flux<List<T>>`로 변환합니다.
-`concatMap()` 내에서 `List<T>`는 비동기적으로 처리할 것이므로 미리 `map()`을 통해 `Flux<List<T>>`를 `Flux<Flux<T>>`로 변환했습니다.
-이렇게 되면 동기적으로 처리되는 `concatMap()` 내부에서는 `Flux<T>`가 `flatMap()`을 통해 비동기적으로 작업이 처리됩니다.
-
-```console
-2024-02-02 06:06:52.914 INFO [main] o.s.b.c.s.AbstractStep: Step: [synchronizeAppliedLecturesStep] executed in 56s178ms
-```
-
-`buffer()`를 사용하지 않는 코드보다 더 빠르게 작업이 수행되는 것을 볼 수 있었습니다.
-
-<br/><br/>
-
-전체 코드는 다음과 같습니다.
-
-```kotlin title="SynchronizeStudentsTasklet.kt" showLineNumbers
-@Tasklet
-class SynchronizeStudentsTasklet(
-    private val customStudentRepository: CustomStudentRepository,
-    private val studentClient: StudentClient,
-    private val lectureClient: LectureClient
-) : ItemTasklet<Mono<Student>> {
-    private val years = (2018..Year.now().value).toList()
-    private var number = 100000
-    private var idx = 0
-
-    override fun read(): Mono<Student>? =
-        years.getOrNull(idx)
-            ?.let { year ->
-                if (number >= 102000) {
-                    idx += 1
-                    number = 100000
-                }
-
-                "$year${number++}"
-            }
-            ?.let {
-                studentClient.getStudentById(it)
-                    .filter { student -> !student.status.contains("제적") }
-                    .flatMap { student ->
-                        if (student.status.run { contains("휴학") || contains("졸업") }) {
-                            Mono.just(student)
-                        } else {
-                            Mono.zip(
-                                lectureClient.getAppliedLectureIdsByStudentId(it)
-                                    .collectList(),
-                                lectureClient.getPreAppliedLectureIdsByStudentId(it)
-                                    .collectList()
-                            ).map { (appliedLectureIds, preAppliedLectureIds) ->
-                                student.copy(
-                                    appliedLectureIds = appliedLectureIds.toHashSet(),
-                                    preAppliedLectureIds = preAppliedLectureIds.toHashSet()
-                                )
-                            }
-                        }
-                    }
-            }
-
-    override fun write(chunk: Chunk<out Mono<Student>>) {
-        Flux.merge(chunk.items)
-            .buffer(10)
-            .map { Flux.fromIterable(it) }
-            .concatMap { student ->
-                student.flatMap { customStudentRepository.updateStudent(it) }
-            }
-            .collectList()
-            .block()
     }
 }
 ```
 
-# 마치며
+기존의 컨트롤러 계층 테스트 코드에 `ControllerTest`에 포함된 `WebTestClient`와 함께 해당 API 명세에 대한 정보만 추가해주면 자동으로 `/build/generated-snippets` 경로에 스니펫이 생성됩니다.
 
-지금까지 리액티브 프로그래밍 환경에서 동기 처리를 통해 외부 API의 성능 문제를 극복한 경험을 공유해보았습니다.
-동기 처리보다 비동기 처리의 짧은 지연 시간만을 생각해 모든 작업에 비동기를 적용해버리는 것은 옳지 않다는 것을 깨달은 계기였던 것 같습니다.
+![](1.png)
+
+이렇게 생성된 스니펫들은 AsciiDoc 형태로 저장되는데, 이 스니펫만으로는 API 명세를 표현하기 힘듭니다.
+그래서 스니펫들을 이용해서 API 명세서를 직접 작성해야 합니다.
+물론 문법이 어렵진 않지만 개발자의 개입이 필요하다는 점에서 만족스럽지 못했습니다.
+저는 이 점을 Swagger를 도입해 극복하려고 했습니다.
+
+# Swagger
+
+Swagger는 Spring REST Docs처럼 API 문서화를 위한 도구 중 하나입니다.
+
+![](2.png)
+
+Swagger는 Spring REST Docs와는 다르게 전용 UI를 제공하며, API 테스트 기능까지 가지고 있습니다.
+
+<br /><br />
+
+이럼에도 앞서 문서화 도구로 Swagger를 사용하지 않았던 이유는 Swagger가 테스트 코드에만 영향을 주는 Spring REST Docs와 달리 프로덕션 코드에도 영향을 주기 때문입니다.
+Swagger는 프로덕션 코드에 작성된 어노테이션들을 기반으로 API 명세서를 생성하는데요.
+이 점에서 프로덕션 코드에 문서화 관련 코드가 포함되는 것이 싫었던 저는 Swagger가 아닌 Spring REST Docs를 선택했던 것입니다.
+
+# Spring REST Docs with Swagger
+
+결국 이렇게 상반된 장단점을 가진 Spring REST Docs와 Swagger를 함께 사용해보기로 했습니다.
+우선 Spring REST Docs가 생성한 스니펫들을 Swagger가 읽을 수 있도록 OpenAPI 명세에 맞춘 문서로 변환해야 합니다.
+그렇게 변환한 문서를 Swagger로 읽으면 끝입니다.
+
+```kotlin title="build.gradle.kts" showLineNumbers
+plugins {
+    id("com.epages.restdocs-api-spec") version "0.17.1"
+    ...
+}
+
+dependencies {
+    testImplementation("com.epages:restdocs-api-spec-webtestclient:0.17.1")
+    testImplementation("com.epages:restdocs-api-spec:0.17.1")
+    ...
+}
+```
+
+우선 스니펫들을 OpenAPI 문서로 변환하는데 필요한 의존성들을 추가합니다.
+
+```kotlin title="build.gradle.kts" showLineNumbers {4, 9-16}
+tasks {
+    test {
+        useJUnitPlatform()
+        finalizedBy(jacocoTestReport, withType<OpenApi3Task>())
+    }
+    ...
+}
+
+openapi3 {
+    setServer("Quizit")
+    title = "Quizit API"
+    version = "v1"
+    format = "yaml"
+    outputFileNamePrefix = "api"
+    outputDirectory = "src/main/resources/static/docs"
+}
+```
+
+그 다음, 스니펫을 OpenAPI 문서로 변환하는 작업인 `openapi3`를 설정한 후 테스트 작업 과정에 추가했습니다.
+이렇게 되면 테스트 코드를 실행한 후 Spring REST Docs에 의해 스니펫들이 생성되고 `openapi3` 작업을 거쳐 스니펫들을 기반으로 한 OpenAPI 문서가 `/src/main/resources/static/docs` 경로에 생성됩니다.
+참고로 `/src/main/resources/static/docs` 디렉토리가 존재하는 상태여야 합니다.
+
+```yaml title="api.yaml" showLineNumbers
+openapi: 3.0.1
+info:
+  title: Quizit API
+  version: v1
+servers:
+- url: Quizit
+tags: []
+paths:
+  /admin/chapter:
+    post:
+      tags:
+      - admin
+      operationId: 챕터 생성 성공(200)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/admin-chapter-650774478'
+            examples:
+              챕터 생성 성공(200):
+                value: |-
+                  {
+                    "description" : "description",
+                    "document" : "document",
+                    "courseId" : "test",
+                    "image" : "image",
+                    "index" : 1
+                  }
+      responses:
+        "200":
+          description: "200"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/admin-chapter-id-715247309'
+              examples:
+                챕터 생성 성공(200):
+                  value: |-
+                    {
+                      "id" : "test",
+                      "description" : "description",
+                      "document" : "document",
+                      "courseId" : "test",
+                      "image" : "image",
+                      "index" : 1
+                    }
+  ...
+```
+
+테스트가 성공적으로 완료되면 위처럼 OpenAPI 문서인 `api.yaml`이 생성됩니다.
+이 문서와 Swagger만 있다면 언제든지 API 명세서를 볼 수 있습니다.
+
+## CI / CD
+
+이제 API 명세서를 생성하는 것까지 자동화가 되었습니다.
+
+<br /><br />
+
+하지만 프론트엔드 팀원이 API 명세서를 보기 위해서는 로컬에서 테스트 코드를 돌리고 Swagger를 따로 구해야 한다는 불편함이 있었습니다.
+이러한 불편함을 없애기 위해 Kubernetes 클러스터에 프론트엔드 팀원이 접속할 수 있는 Swagger를 구동시켰습니다.
+또한 백엔드가 업데이트 될 때, API 명세서에도 변경 사항이 바로 반영되도록 CI / CD 파이프라인을 활용했습니다.
+
+```groovy title="Jenkinsfile" showLineNumbers {10, 17-23}
+pipeline{
+    agent {
+        ...
+    }
+
+    stages {
+        stage('Build') {
+            steps {
+                container('gradle') {
+                    sh('mkdir -p ./src/main/resources/static/docs')
+                    sh('gradle build')
+                    sh('mv ./build/libs/quiz-service.jar ./')
+                }
+            }
+        }
+
+        stage('Update API Specification') {
+            steps {
+                container('aws') {
+                    sh('aws s3 cp src/main/resources/static/docs/api.yml s3://quizit-swagger/quiz.yml')
+                }
+            }
+        }
+        ...
+    }
+}
+```
+
+이미 구성된 CI 파이프라인에 생성된 OpenAPI 문서를 객체 스토리지인 AWS S3에 저장하도록 했습니다.
+이후 Swagger가 OpenAPI 문서의 객체 URL을 참조하도록 설정합니다.
+이렇게 문서화하는 과정을 완전히 자동화하는데 성공했습니다.
