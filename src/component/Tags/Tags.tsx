@@ -31,6 +31,7 @@ const Tags = () => {
             <div
               style={selected ? { backgroundColor: 'rgb(230, 230, 230)' } : {}}
               className={styles.tag}
+              key={tag}
               onClick={() => {
                 dispatch(
                   setTags(
