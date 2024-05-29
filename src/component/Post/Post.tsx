@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import styles from './Post.module.css'
 import MotionedDiv from '@/lib/motion'
 import { Variants } from 'framer-motion'
+import { useSelector } from 'react-redux'
 
 interface Props {
   post: Post
@@ -12,6 +13,7 @@ interface Props {
 
 const Post = ({ post, variants }: Props) => {
   const router = useRouter()
+  const tags = useSelector((store: Store) => store.filter.tags)
 
   return (
     <div
@@ -22,7 +24,14 @@ const Post = ({ post, variants }: Props) => {
         <div className={styles.description}>{post.description}</div>
         <div className={styles.tags}>
           {post.tags.map(tag => (
-            <div className={styles.tag} key={tag}>
+            <div
+              style={
+                tags.includes(tag)
+                  ? { backgroundColor: 'rgb(230, 230, 230)' }
+                  : {}
+              }
+              className={styles.tag}
+              key={tag}>
               {tag}
             </div>
           ))}

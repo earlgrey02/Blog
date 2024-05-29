@@ -11,9 +11,7 @@ interface Props {
 
 const Image = ({ src, alt }: Props) => {
   const [isLoading, setIsLoading] = useState(true)
-  const onLoadingCompleteHandler = useCallback(() => {
-    setIsLoading(false)
-  }, [])
+  const loadingCompleteHandler = useCallback(() => setIsLoading(false), [])
 
   return (
     <div className={styles.image}>
@@ -33,8 +31,11 @@ const Image = ({ src, alt }: Props) => {
         width={570}
         height={850}
         objectFit="contain"
-        onLoadingComplete={onLoadingCompleteHandler}
-        style={{ height: 'auto', maxWidth: '100%' }}
+        onLoadingComplete={loadingCompleteHandler}
+        style={{
+          height: 'auto',
+          maxWidth: '100%'
+        }}
       />
     </div>
   )
