@@ -1,12 +1,19 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit'
 
+interface PageStates {
+  index: number
+}
+
 const pageSlice = createSlice({
   name: 'page',
-  initialState: 0,
+  initialState: { index: 0 } as PageStates,
   reducers: {
-    setPage: (state: number, action: PayloadAction<number>) => action.payload
+    setIndex: (state: PageStates, action: PayloadAction<number>) => ({
+      ...state,
+      index: action.payload
+    })
   }
 })
 
-export const { setPage } = pageSlice.actions
+export const { setIndex } = pageSlice.actions
 export default pageSlice.reducer
