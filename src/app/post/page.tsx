@@ -1,35 +1,34 @@
 'use client'
-import { allPosts } from 'contentlayer/generated'
 import styles from './Page.module.css'
-import { compareDesc } from 'date-fns'
 import Post from '@/component/Post/Post'
 import MotionedDiv from '@/lib/motion'
 import { useEffect, useMemo, useState } from 'react'
 import { Variants } from 'framer-motion'
 import { useDispatch, useSelector } from 'react-redux'
 import { Pagination } from '@mui/material'
-import { setPage } from '@/redux/reducers/pageSlice'
+import { setIndex } from '@/redux/reducers/pageSlice'
+import { getPosts } from '@/modules/post/api'
+import Tags from '@/component/Tags/Tags'
+import { toPages } from '@/lib/pagination'
 
 const Page = () => {
-  const page = useSelector((store: Store) => store.page)
+  const index = useSelector((store: Store) => store.page.index)
+  const filter = useSelector((store: Store) => store.filter)
   const [isEnter, setIsEnter] = useState(true)
   const dispatch = useDispatch()
 
   const pages = useMemo(
     () =>
-      allPosts
-        .sort((post1, post2) =>
-          compareDesc(new Date(post1.date), new Date(post2.date))
-        )
-        .reduce<Post[][]>((pages, post, index) => {
-          const page = Math.floor(index / 4)
-
-          if (!pages[page]) pages[page] = []
-          pages[page].push(post)
-
-          return pages
-        }, []),
-    []
+      toPages(
+        filter.tags.length === 0
+          ? getPosts()
+          : getPosts().filter(
+              post =>
+                filter.tags.filter(tag => post.tags.includes(tag)).length ===
+                filter.tags.length
+            )
+      ),
+    [filter.tags]
   )
 
   const variants: Variants = useMemo(
@@ -66,14 +65,34 @@ const Page = () => {
         Post
       </MotionedDiv>
       <MotionedDiv
+        initial={{ opacity: 0, filter: 'blur(0.8px)' }}
+        animate={{
+          opacity: 1,
+          filter: 'blur(0px)',
+          transition: { duration: 2 }
+        }}>
+        <Tags />
+      </MotionedDiv>
+      <MotionedDiv
         className={styles.posts}
         variants={variants}
         initial="initial"
         animate="animate"
-        key={page}>
-        {pages[page].map(post => (
+        key={index}>
+        {pages[index]?.map(post => (
           <Post post={post} variants={variants} key={post.id} />
-        ))}
+        )) ?? (
+          <MotionedDiv
+            className={styles.emptyMessage}
+            initial={{ opacity: 0, filter: 'blur(0.8px)' }}
+            animate={{
+              opacity: 1,
+              filter: 'blur(0px)',
+              transition: { duration: 1 }
+            }}>
+            일치하는 게시글이 없습니다.
+          </MotionedDiv>
+        )}
       </MotionedDiv>
       <MotionedDiv
         className={styles.paginator}
@@ -85,8 +104,8 @@ const Page = () => {
         }}>
         <Pagination
           count={pages.length}
-          page={page + 1}
-          onChange={(_, index) => dispatch(setPage(index - 1))}
+          page={index + 1}
+          onChange={(_, index) => dispatch(setIndex(index - 1))}
         />
       </MotionedDiv>
     </div>
