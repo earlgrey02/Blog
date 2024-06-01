@@ -24,16 +24,17 @@ const Post = ({ post, variants }: Props) => {
         <div className={styles.description}>{post.description}</div>
         <div className={styles.tags}>
           {post.tags.map(tag => (
-            <div
-              style={
-                tags.includes(tag)
-                  ? { backgroundColor: 'rgb(230, 230, 230)' }
-                  : {}
-              }
+            <MotionedDiv
+              animate={{
+                backgroundColor: tags.includes(tag)
+                  ? 'rgb(230, 230, 230)'
+                  : 'rgb(240, 240, 240)'
+              }}
+              transition={{ duration: 0.5 }}
               className={styles.tag}
               key={tag}>
               {tag}
-            </div>
+            </MotionedDiv>
           ))}
         </div>
         <div className={styles.date}>{post.date.substring(0, 10)}</div>
