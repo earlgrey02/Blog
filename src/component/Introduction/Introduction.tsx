@@ -38,7 +38,7 @@ const Introduction = () => {
           filter: 'blur(0px)',
           transition: { duration: 2, delay: 1 }
         }}>
-        가치있는 서비스를 개발하기 위해 기술을 공부합니다.
+        그저 평범한 공대생의 기술 블로그입니다.
       </MotionedDiv>
     </div>
   )
