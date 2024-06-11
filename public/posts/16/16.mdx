@@ -78,7 +78,7 @@ mounted: 4
 `number`를 증가시킬 때마다 이전 `useEffect()`에서의 `onUnmounted()`와 현재 `useEffect()`의 `onMounted()`가 함께 호출되는 것을 볼 수 있습니다.
 이러한 점을 이용해 디바운싱을 구현할 수 있습니다.
 
-```ts title="debounce.ts" showLineNumbers {3, 5}
+```ts title="useDebouncing.ts" showLineNumbers {3, 5}
 const useDebouncing = (action: () => void, delay: number, deps: DependencyList) => {
   useEffect(() => {
     const timer = setTimeout(action, delay)
@@ -96,44 +96,92 @@ const useDebouncing = (action: () => void, delay: number, deps: DependencyList) 
 
 이제 좋아요 기능에 디바운싱을 적용해 최적화를 해보겠습니다.
 
-```ts title="hook.ts" showLineNumbers {12-20}
-const useLike = (post: PostResponse) => {
-  const student = useSelector((store: Store) => store.student)
-  const [isLiked, setIsLiked] = useState(post.likedStudentIds.includes(student.id))
-  const [initialIsLiked, setInitialIsLiked] = useState(isLiked)
-  const [like, setLike] = useState(post.likedStudentIds.length)
+```ts title="postReducer.ts" showLineNumbers {9-17}
+const postSlice = createSlice({
+  name: 'post',
+  initialState: {
+    like: {},
+    comment: {},
+    searchRequest: { content: '' }
+  } as PostStates,
+  reducers: {
+    setLikedStudentIds: (state: PostStates, action: PayloadAction<{ id: string; likedStudentIds: string[] }>) => ({
+      ...state,
+      like: {
+        ...state.like,
+        [action.payload.id]: {
+          likedStudentIds: action.payload.likedStudentIds
+        }
+      }
+    }),
+    ...
+  }
+})
+```
 
-  const likeHandler = useCallback(async () => {
-    setLike(current => (isLiked ? current - 1 : current + 1))
+앞서, 게시글은 여러 컴포넌트에서 사용되므로 좋아요 개수를 게시글이 있는 모든 컴포넌트에서 동기화할 수 있도록 Redux 스토어를 구현했습니다.
+Redux 스토어에는 게시글마다 좋아요한 유저 리스트인 `likedStudentIds`를 저장하도록 했습니다.
+
+```ts title="useLike.ts" showLineNumbers {31-46}
+const useLike = (post: PostResponse): LikeStates => {
+  const student = useSelector((store: Store) => store.student)
+  const likedStudentIds = useSelector((store: Store) => store.post.like[post.id]?.likedStudentIds)
+  const [initialIsLiked, setInitialIsLiked] = useState<boolean>()
+  const [isLiked, setIsLiked] = useState<boolean>()
+  const [count, setCount] = useState<number>()
+  const dispatch = useDispatch()
+
+  const likeHandler = useCallback(() => {
+    setCount(current => (isLiked ? current! - 1 : current! + 1))
     setIsLiked(current => !current)
   }, [isLiked])
+
+  useEffect(() => {
+    if (likedStudentIds) {
+      setInitialIsLiked(likedStudentIds.includes(student.id))
+      setIsLiked(likedStudentIds.includes(student.id))
+      setCount(likedStudentIds.length)
+    }
+  }, [likedStudentIds])
+
+  useEffect(() => {
+    dispatch(
+      setLikedStudentIds({
+        id: post.id,
+        likedStudentIds: post.likedStudentIds
+      })
+    )
+  }, [post])
 
   useDebouncing(
     async () => {
       if (initialIsLiked !== isLiked) {
-        setInitialIsLiked((await likePostById(post.id)).likedStudentIds.includes(student.id))
+        const newPost = await likePostById(post.id)
+
+        dispatch(
+          setLikedStudentIds({
+            id: post.id,
+            likedStudentIds: newPost.likedStudentIds
+          })
+        )
       }
     },
     500,
-    [isLiked, post.id, student.id]
+    [isLiked]
   )
 
-  useEffect(() => {
-    setIsLiked(post.likedStudentIds.includes(student.id))
-  }, [post.likedStudentIds, student.id])
-
-  return { like, isLiked, likeHandler }
+  return { count, isLiked, likeHandler }
 }
 ```
 
-해당 게시글의 좋아요 개수인 `like` 및 현재 유저의 좋아요 여부인 `isLiked` 등을 포함한 Custom Hook을 구현했습니다.
+게시글의 좋아요 개수인 `count` 및 현재 유저의 좋아요 여부인 `isLiked` 등을 포함한 Custom Hook을 구현했습니다.
 `isLiked`가 처음과 달라졌는지 확인하기 위해 최초의 `isLiked`를 `initialIsLiked`에 저장했습니다.
-좋아요를 클릭하면 `likeHandler`에 의해 `isLiked`의 상태가 바뀝니다.
-이때, 호출되는 `useEffect()`에서 디바운싱을 통해 좋아요를 여러 번 클릭해도 마지막 좋아요 요청만 처리하도록 최적화를 수행했습니다.
+좋아요를 클릭하면 `likeHandler`에 의해 `isLiked`의 상태가 바뀌는데요.
+이때, 호출되는 `useDebouncing()`에서 디바운싱을 통해 좋아요를 여러 번 클릭해도 마지막 좋아요 요청만 실제로 처리하게 됩니다.
 
 <br /><br />
 
-최종적으로 `isLiked`가 `initialIsLiked`와 다르다면 바뀐 좋아요 여부를 서버에 반영하고 `initialIsLiked`를 현재 좋아요 여부로 갱신합니다.
+최종적으로는 `useDebouncing()`에서 `isLiked`가 `initialIsLiked`와 다르다면 바뀐 좋아요 여부를 서버에 반영하고 Redux 스토어 내의 `likedStudentIds`를 갱신하게 됩니다.
 
 ![](3.gif)
 
@@ -142,4 +190,4 @@ const useLike = (post: PostResponse) => {
 2024-04-23 20:55:13.135 INFO [nioEventLoopGroup-3-3] c.d.c.l.LoggingFilter: [f8582d5c] HTTP 200 OK
 ```
 
-이전과 달리 많은 좋아요 요청에도 API 호출이 한 번만 발생한 것을 확인할 수 있습니다.
+이전과 달리 많은 좋아요 요청에도 실제 API 호출은 한 번만 발생한 것을 확인할 수 있습니다.

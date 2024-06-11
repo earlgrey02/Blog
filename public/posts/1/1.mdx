@@ -33,7 +33,7 @@ logging:
 # Spring AOP
 
 보통 Spring에서 로깅을 자체적으로 구현한다면 AOP(Aspect Oriented Programming)를 사용하는 예시가 가장 대표적입니다.
-AOP란 핵심적인 기능으로부터 부가적인 기능을 분리해 모듈화하는 프로그래밍 기법 중 하나입니다.
+AOP란 핵심적인 기능으로부터 부가적인 기능인 횡단 관심사를 분리해 모듈화하는 프로그래밍 기법 중 하나입니다.
 여기서 로깅은 부가적인 기능 중 하나이므로 AOP의 모듈화 대상이 되는데요.
 그러므로 로깅은 횡단 관심사인 애스펙트(Aspect)가 되며, 로깅의 대상이 되는 지점이 포인트컷(Pointcut)이 됩니다.
 
@@ -96,24 +96,19 @@ annotation class Handler
 
 ```kotlin title="LoggingAspect.kt" showLineNumber
 fun around(joinPoint: ProceedingJoinPoint): Mono<*> =
-    (joinPoint.args.first() as ServerRequest)
-        .let { request ->
-            request.bodyToMono<String>()
-                .defaultIfEmpty("")
-                .doOnNext {
-                    logger.info {
-                        "HTTP ${request.method()} ${request.uri().run { "$path${query?.let { "?$it" } ?: ""}" }} ${
-                            it.replace(Regex("[ \\n]"), "")
-                                .replace(",", ", ")
-                                .trim()
-                        }"
-                    }
+    with(joinPoint.args.first() as ServerRequest) {
+        bodyToMono<String>()
+            .defaultIfEmpty("")
+            .doOnNext {
+                logger.info {
+                    "HTTP ${method()} ${uri().run { "$path${query?.let { "?$it" } ?: ""}" }} ${it.toPrettyJson()}"
                 }
-                .flatMap {
-                    (joinPoint.proceed(arrayOf(request)) as Mono<*>)
-                        .doOnNext { logger.info { "HTTP ${(it as ServerResponse).statusCode()}" } }
-                }
-        }
+            }
+            .flatMap {
+                (joinPoint.proceed(arrayOf(this)) as Mono<*>)
+                    .doOnNext { logger.info { "HTTP ${(it as ServerResponse).statusCode()}" } }
+            }
+    }
 ```
 
 로깅을 수행하는 어드바이스(Advice)는 위와 같이 구현했습니다.
@@ -130,26 +125,21 @@ fun around(joinPoint: ProceedingJoinPoint): Mono<*> =
 class LoggingAspect {
     private val logger = getLogger()
 
-    @Around("@within(com.doyoumate.common.annotation.Handler)")
+    @Around("@within(com.quizit.quiz.global.annotation.Handler)")
     fun around(joinPoint: ProceedingJoinPoint): Mono<*> =
-        (joinPoint.args.first() as ServerRequest)
-            .let { request ->
-                request.bodyToMono<String>()
-                    .defaultIfEmpty("")
-                    .doOnNext {
-                        logger.info {
-                            "HTTP ${request.method()} ${request.uri().run { "$path${query?.let { "?$it" } ?: ""}" }} ${
-                                it.replace(Regex("[ \\n]"), "")
-                                    .replace(",", ", ")
-                                    .trim()
-                            }"
-                        }
+        with(joinPoint.args.first() as ServerRequest) {
+            bodyToMono<String>()
+                .defaultIfEmpty("")
+                .doOnNext {
+                    logger.info {
+                        "HTTP ${method()} ${uri().run { "$path${query?.let { "?$it" } ?: ""}" }} ${it.toPrettyJson()}"
                     }
-                    .flatMap {
-                        (joinPoint.proceed(arrayOf(request)) as Mono<*>)
-                            .doOnNext { logger.info { "HTTP ${(it as ServerResponse).statusCode()}" } }
-                    }
-            }
+                }
+                .flatMap {
+                    (joinPoint.proceed(arrayOf(this)) as Mono<*>)
+                        .doOnNext { logger.info { "HTTP ${(it as ServerResponse).statusCode()}" } }
+                }
+        }
 }
 ```
 ```console
@@ -172,35 +162,30 @@ public interface ServerRequest {
 여기서 `bodyToMono()`는 단순히 Request Body를 반환하는 것이 아닌 Request Body를 발행하는 `Publisher`의 구현체인 `Mono<T>`를 반환하게 됩니다.
 `Mono<T>`는 1개의 데이터만 발행하는 단일 요소 스트림이므로 한번 구독을 통해 값을 발행받으면 그 이후로는 더 이상 값을 받을 수 없습니다.
 
-```kotlin title="LoggingAspect.kt" showLineNumbers /bodyToMono<String>()/
+```kotlin title="LoggingAspect.kt" showLineNumbers {9}
 @Aspect
 @Component
 class LoggingAspect {
     private val logger = getLogger()
 
-    @Around("@within(com.doyoumate.common.annotation.Handler)")
+    @Around("@within(com.quizit.quiz.global.annotation.Handler)")
     fun around(joinPoint: ProceedingJoinPoint): Mono<*> =
-        (joinPoint.args.first() as ServerRequest)
-            .let { request ->
-                request.bodyToMono<String>()
-                    .defaultIfEmpty("")
-                    .doOnNext {
-                        logger.info {
-                            "HTTP ${request.method()} ${request.uri().run { "$path${query?.let { "?$it" } ?: ""}" }} ${
-                                it.replace(Regex("[ \\n]"), "")
-                                    .replace(",", ", ")
-                                    .trim()
-                            }"
-                        }
+        with(joinPoint.args.first() as ServerRequest) {
+            bodyToMono<String>()
+                .defaultIfEmpty("")
+                .doOnNext {
+                    logger.info {
+                        "HTTP ${method()} ${uri().run { "$path${query?.let { "?$it" } ?: ""}" }} ${it.toPrettyJson()}"
                     }
-                    .flatMap {
-                        (joinPoint.proceed(arrayOf(request)) as Mono<*>)
-                            .doOnNext { logger.info { "HTTP ${(it as ServerResponse).statusCode()}" } }
-                    }
-            }
+                }
+                .flatMap {
+                    (joinPoint.proceed(arrayOf(this)) as Mono<*>)
+                        .doOnNext { logger.info { "HTTP ${(it as ServerResponse).statusCode()}" } }
+                }
+        }
 }
 ```
-```kotlin title="AuthenticationHandler.kt" showLineNumbers /bodyToMono<LoginRequest>()/
+```kotlin title="AuthenticationHandler.kt" showLineNumbers {8-9}
 @Handler
 class AuthenticationHandler(
     private val authenticationService: AuthenticationService
@@ -252,7 +237,7 @@ class DefaultServerRequestBuilder implements ServerRequest.Builder {
 
 그렇게 수정한 코드는 다음과 같습니다.
 
-```kotlin title="LoggingAspect.kt" showLineNumbers {21-25}
+```kotlin title="LoggingAspect.kt" showLineNumbers {17-19}
 @Aspect
 @Component
 class LoggingAspect {
@@ -260,29 +245,22 @@ class LoggingAspect {
 
     @Around("@within(com.quizit.quiz.global.annotation.Handler)")
     fun around(joinPoint: ProceedingJoinPoint): Mono<*> =
-        (joinPoint.args.first() as ServerRequest)
-            .let { request ->
-                request.bodyToMono<String>()
-                    .defaultIfEmpty("")
-                    .doOnNext {
-                        logger.info {
-                            "HTTP ${request.method()} ${request.requestPath()} ${
-                                it.replace(" ", "")
-                                    .replace("\n", "")
-                                    .replace(",", ", ").trim()
-                            }"
-                        }
+        with(joinPoint.args.first() as ServerRequest) {
+            bodyToMono<String>()
+                .defaultIfEmpty("")
+                .doOnNext {
+                    logger.info {
+                        "HTTP ${method()} ${uri().run { "$path${query?.let { "?$it" } ?: ""}" }} ${it.toPrettyJson()}"
                     }
-                    .map {
-                        ServerRequest.from(request)
-                            .body(it)
-                            .build()
-                    }
-                    .flatMap {
-                        (joinPoint.proceed(arrayOf(it)) as Mono<*>)
-                            .doOnNext { logger.info { "HTTP ${(it as ServerResponse).statusCode()}" } }
-                    }
-            }
+                }
+                .map {
+                    ServerRequest.from(this)
+                        .body(it)
+                        .build()
+                }
+                .flatMap { joinPoint.proceed(arrayOf(it)) as Mono<*> }
+                .doOnNext { logger.info { "HTTP ${(it as ServerResponse).statusCode()}" } }
+        }
 }
 ```
 
@@ -395,52 +373,48 @@ class LoggingFilter : WebFilter {
             .flatMap { chain.filter(it) }
 
     private fun ServerWebExchange.log(): Mono<ServerWebExchange> =
-        request.bodyToByteArray()
-            .doOnNext { loggingRequest(request, it) }
-            .map {
-                mutate()
-                    .request(object : ServerHttpRequestDecorator(request) {
-                        override fun getBody(): Flux<DataBuffer> =
-                            Flux.just(
-                                response.bufferFactory()
-                                    .wrap(it)
-                            )
-                    })
-                    .response(response.apply {
-                        beforeCommit {
-                            loggingResponse(response)
-                            Mono.empty()
-                        }
-                    })
-                    .build()
+        mutate()
+            .let { builder ->
+                Mono.just(request)
+                    .flatMap {
+                        request.body
+                            .toByteArray()
+                    }
+                    .doOnNext {
+                        builder.request(
+                            object : ServerHttpRequestDecorator(request) {
+                                override fun getBody(): Flux<DataBuffer> =
+                                    Flux.just(
+                                        response.bufferFactory()
+                                            .wrap(it)
+                                    )
+                            }
+                        )
+                    }
+                    .defaultIfEmpty(ByteArray(0))
+                    .doOnNext { loggingRequest(request, String(it)) }
+                    .map {
+                        builder
+                            .response(response.apply {
+                                beforeCommit {
+                                    loggingResponse(this)
+                                    Mono.empty()
+                                }
+                            })
+                            .build()
+                    }
             }
 
-    private fun ServerHttpRequest.bodyToByteArray(): Mono<ByteArray> =
-        DataBufferUtils
-            .join(body)
-            .map { buffer ->
-                ByteArray(buffer.readableByteCount())
-                    .also { DataBufferUtils.release(buffer.read(it)) }
-            }
-            .defaultIfEmpty(ByteArray(0))
-
-    private fun loggingRequest(request: ServerHttpRequest, body: ByteArray) {
+    private fun loggingRequest(request: ServerHttpRequest, body: String) {
         request.apply {
             logger.info {
-                "HTTP $method ${uri.run { "$path${query?.let { "?$it" } ?: ""}" }} ${
-                    String(body)
-                        .replace(Regex("[ \\n]"), "")
-                        .replace(",", ", ")
-                        .trim()
-                }"
+                "HTTP $method ${uri.run { "$path${query?.let { "?$it" } ?: ""}" }} ${body.toPrettyJson()}"
             }
         }
     }
 
     private fun loggingResponse(response: ServerHttpResponse) {
-        response.apply {
-            logger.info { "HTTP $statusCode" }
-        }
+        logger.info { "HTTP ${response.statusCode}" }
     }
 }
 ```
@@ -448,73 +422,95 @@ class LoggingFilter : WebFilter {
 `WebFilter`에서 요청 로깅은 기존의 AOP 방식처럼 구현하고 응답 로깅을 저수준의 `ServerHttpResponse`를 통해 구현하기로 했습니다.
 
 ```kotlin showLineNumbers {6, 8}
-private fun ServerHttpRequest.bodyToByteArray(): Mono<ByteArray> =
-    DataBufferUtils
-        .join(body)
-        .map { buffer ->
-            ByteArray(buffer.readableByteCount())
-                .also { DataBufferUtils.release(buffer.read(it)) }
+fun Flux<DataBuffer>.toByteArray(): Mono<ByteArray> =
+    DataBufferUtils.join(this)
+        .map {
+            ByteArray(it.readableByteCount())
+                .also(it::read)
+                .apply { DataBufferUtils.release(it) }
         }
-        .defaultIfEmpty(ByteArray(0))
 ```
 
 `ServerHttpRequest`의 경우, `ServerResponse`와 달리 `DataBuffer`를 통해 Request Body를 다루게 됩니다.
 주의해야 할 점은 Request Body가 비어있는 경우, `join()`이 `Mono.empty()`를 반환한다는 점인데요.
 이렇게 되면 `Mono.empty()`로 인해 다운 스트림이 전부 실행되지 않게 됩니다.
-그래서 `defaultIfEmpty()`를 사용해 크기가 0인 `ByteArray`를 기본 값으로 설정해주었습니다.
+그래서 `LoggingFilter`에서는 `defaultIfEmpty()`를 사용해 크기가 0인 `ByteArray`를 기본 값으로 설정해주었습니다.
 
 <br /><br />
 
 또한 버퍼(Buffer)의 경우, 사용한 후에 `release()`를 호출하지 않으면 해당 버퍼는 남은 레퍼런스 카운트(Reference Count)에 의해 가비지 컬렉션(Garbage Collection)의 대상이 되지 않는데요.
-이는 메모리 누수로 이어질 수 있으므로 반드시 `release()`를 통해 버퍼를 해제해줘야 합니다.
+이는 메모리 누수로 이어질 수 있으므로 반드시 `release()`를 통해 버퍼를 해제해야 합니다.
 위 코드에서는 `DataBufferUtils`의 `release()`를 사용했습니다.
 
-```kotlin showLineNumbers {6-12}
+```kotlin title="LoggingFilter.kt" showLineNumbers {10-18}
 private fun ServerWebExchange.log(): Mono<ServerWebExchange> =
-    request.bodyToByteArray()
-        .doOnNext { loggingRequest(request, it) }
-        .map {
-            mutate()
-                .request(object : ServerHttpRequestDecorator(request) {
-                    override fun getBody(): Flux<DataBuffer> =
-                        Flux.just(
-                            response.bufferFactory()
-                                .wrap(it)
-                        )
-                })
-                .response(response.apply {
-                    beforeCommit {
-                        loggingResponse(response)
-                        Mono.empty()
-                    }
-                })
-                .build()
+    mutate()
+        .let { builder ->
+            Mono.just(request)
+                .flatMap {
+                    request.body
+                        .toByteArray()
+                }
+                .doOnNext {
+                    builder.request(
+                        object : ServerHttpRequestDecorator(request) {
+                            override fun getBody(): Flux<DataBuffer> =
+                                Flux.just(
+                                    response.bufferFactory()
+                                        .wrap(it)
+                                )
+                        }
+                    )
+                }
+                .defaultIfEmpty(ByteArray(0))
+                .doOnNext { loggingRequest(request, String(it)) }
+                .map {
+                    builder
+                        .response(response.apply {
+                            beforeCommit {
+                                loggingResponse(this)
+                                Mono.empty()
+                            }
+                        })
+                        .build()
+                }
         }
 ```
 
 당연히 이전처럼 핸들러 계층에서 Request Body를 다시 읽을 수 있도록 `mutate()`를 통해 `ServerWebExchange`에 새로운 `ServerHttpRequest`를 설정해야 합니다.
 이때, `ServerHttpRequestDecorator`를 통해 기존의 `ServerHttpRequest`의 `getBody()`를 새로 정의한 `ServerHttpRequest`를 생성했습니다.
 
-```kotlin showLineNumbers {13-18}
+```kotlin showLineNumbers {23-29}
 private fun ServerWebExchange.log(): Mono<ServerWebExchange> =
-    request.bodyToByteArray()
-        .doOnNext { loggingRequest(request, it) }
-        .map {
-            mutate()
-                .request(object : ServerHttpRequestDecorator(request) {
-                    override fun getBody(): Flux<DataBuffer> =
-                        Flux.just(
-                            response.bufferFactory()
-                                .wrap(it)
-                        )
-                })
-                .response(response.apply {
-                    beforeCommit {
-                        loggingResponse(response)
-                        Mono.empty()
-                    }
-                })
-                .build()
+    mutate()
+        .let { builder ->
+            Mono.just(request)
+                .flatMap {
+                    request.body
+                        .toByteArray()
+                }
+                .doOnNext {
+                    builder.request(
+                        object : ServerHttpRequestDecorator(request) {
+                            override fun getBody(): Flux<DataBuffer> =
+                                Flux.just(
+                                    response.bufferFactory()
+                                        .wrap(it)
+                                )
+                        }
+                    )
+                }
+                .defaultIfEmpty(ByteArray(0))
+                .doOnNext { loggingRequest(request, String(it)) }
+                .map {
+                    builder.response(response.apply {
+                            beforeCommit {
+                                loggingResponse(this)
+                                Mono.empty()
+                            }
+                        })
+                        .build()
+                }
         }
 ```
 ```java title="ReactiveHttpOutputMessage.java" showLineNumbers

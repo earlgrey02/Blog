@@ -8,7 +8,7 @@ tags: [Kotlin, Spring, Spring WebFlux, MongoDB]
 
 <br /><br />
 
-이번에 Spring WebFlux와 MongoDB를 함께 쓰면서 트랜잭션이 실패하는 문제를 겪었습니다.
+이번에 Spring WebFlux와 MongoDB를 함께 쓰면서 간헐적으로 트랜잭션이 실패하는 문제를 겪었습니다.
 
 ```kotlin showLineNumbers {4, 7, 11-20}
 @Transactional
@@ -44,7 +44,7 @@ fun createComment(request: CreateCommentRequest, authentication: DefaultJwtAuthe
 2024-05-20 20:26:39.993 INFO [nioEventLoopGroup-3-7] c.d.c.l.LoggingFilter: [e629b518] HTTP 500 INTERNAL_SERVER_ERROR
 ```
 
-해당 문제는 주어진 트랜잭션의 번호가 처리 중인 트랜잭션과 일치하지 않는다는 메세지와 함께 간헐적으로 발생한다는 것이 특징이었는데요.
+해당 문제는 주어진 트랜잭션의 번호가 처리 중인 트랜잭션과 일치하지 않는다는 메세지와 함께 일부 요청에서만 발생했다는 것이 특징이었는데요.
 
 ![](1.png)
 
@@ -73,12 +73,12 @@ fun createComment(request: CreateCommentRequest, authentication: DefaultJwtAuthe
 
 ![](2.png)
 
-해당 질문자는 저와 똑같이 Spring Data Reactive Mongo를 사용하고 있었으며, 오류 메세지 또한 같았습니다.
-해당 질문의 답변들에는 모두 첫 쿼리에 대한 병렬 처리를 문제로 제시하고 있었습니다.
+해당 질문자는 저와 똑같이 Spring WebFlux와 MongoDB를 함께 사용하고 있었으며, 오류 메세지 또한 같았습니다.
+해당 질문의 답변들에서는 모두 처음 요청하는 쿼리에 대한 병렬 처리를 문제로 제시하고 있었습니다.
 
 ![](3.svg)
 
-저 또한 `zipWith()`를 통해 처음 수행되는 학생 및 게시글 조회를 거의 동시에 수행하도록 구현했는데요.
+저 또한 `zipWith()`를 통해 처음 수행되는 학생 및 게시글 조회를 동시에 수행하도록 구현했는데요.
 그래서 `zipWith()`를 `zipWhen()`으로 바꿔보기로 했습니다.
 
 ![](4.svg)
@@ -117,16 +117,14 @@ fun createComment(request: CreateCommentRequest, authentication: DefaultJwtAuthe
 
 # MongoDB 트랜잭션
 
-문제는 해결했지만 저는 해당 문제의 구체적인 원인을 찾고 싶었습니다.
-비슷한 Node.js의 `Promise.all()` 관련 문제 또는 문서를 탐색해봤지만 끝내 원리를 찾지 못했었습니다.
-결국 저는 해당 문제가 MongoDB의 트랜잭션 특징과 관련이 있다고 생각하고 마무리했는데요.
+해당 문제는 MongoDB 트랜잭션의 특징과 관련이 있는데요.
+MongoDB에서는 `startTransaction`이 `true`인 쿼리가 데이터베이스에 도달하면 트랜잭션이 시작됩니다.
 
 ```console
 2024-05-20 21:50:18.273 DEBUG [AsyncGetter-6-thread-1] o.m.d.p.command: Command "find" started on database "doyoumate" using a connection with driver-generated ID 7 and server-generated ID 6907 to mongodb-3:27019. The request ID is 106 and the operation ID is 103. Command: {"find": "student", "filter": {"_id": {"$oid": "664c0480a158f8347d17ecd9"}}, "limit": 1, "singleBatch": true, "$db": "doyoumate", "$clusterTime": {"clusterTime": {"$timestamp": {"t": 1717246218, "i": 10}}, "signature": {"hash": {"$binary": {"base64": "AAAAAAAAAAAAAAAAAAAAAAAAAAA=", "subType": "00"}}, "keyId": 0}}, "lsid": {"id": {"$binary": {"base64": "/UtJTyDjSJe+lJy8jwQD1w==", "subType": "04"}}}, "txnNumber": 23, "startTransaction": true, "autocommit": false}
 2024-05-20 21:50:18.273 DEBUG [AsyncGetter-6-thread-1] o.m.d.p.command: Command "find" started on database "doyoumate" using a connection with driver-generated ID 8 and server-generated ID 6908 to mongodb-3:27019. The request ID is 107 and the operation ID is 104. Command: {"find": "post", "filter": {"_id": {"$oid": "665afc2ecbdeb92950f8f452"}, "deletedDate": null}, "limit": 2, "batchSize": 256, "$db": "doyoumate", "$clusterTime": {"clusterTime": {"$timestamp": {"t": 1717246218, "i": 10}}, "signature": {"hash": {"$binary": {"base64": "AAAAAAAAAAAAAAAAAAAAAAAAAAA=", "subType": "00"}}, "keyId": 0}}, "lsid": {"id": {"$binary": {"base64": "/UtJTyDjSJe+lJy8jwQD1w==", "subType": "04"}}}, "txnNumber": 23, "autocommit": false}
 ```
 
-MongoDB에서는 `startTransaction`이 `true`인 쿼리가 데이터베이스에 도달하면 트랜잭션이 시작됩니다.
-실제로 로그를 확인해보면 처음 수행되는 조회에서만 Spring `startTransaction`이 `true`인 것을 확인할 수 있습니다.
+실제로 로그를 확인해보면 처음 수행되는 조회에서만 Spring `startTransaction`이 `true`인 것을 확인할 수 있는데요.
 하지만 첫 번째 쿼리를 다른 쿼리와 동시에 수행하면 `startTransaction`이 `true`인 첫 번째 쿼리가 데이터베이스에 도달하기 전에 다른 쿼리가 데이터베이스에 도달하는 상황이 존재할 수 있습니다.
-이 경우, 해당 쿼리는 트랜잭션 시작 전에 수행되며 존재하지 않는 트랜잭션을 참조하게 되어 `NoSuchTransaction`이 발생한다는 것이 제 생각입니다.
+이 경우, 해당 쿼리는 트랜잭션 시작 전에 수행되며 존재하지 않는 트랜잭션을 참조하게 되어 `NoSuchTransaction`이 발생하게 됩니다.
