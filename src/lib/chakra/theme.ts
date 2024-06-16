@@ -33,6 +33,14 @@ const theme: ThemeOverride = {
           cursor: 'pointer'
         }
       }
+    },
+    Button: {
+      baseStyle: {
+        borderRadius: '50%'
+      },
+      defaultProps: {
+        variant: 'ghost'
+      }
     }
   }
 }
