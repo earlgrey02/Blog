@@ -1,10 +1,10 @@
 import { allPosts } from 'contentlayer/generated'
 import { notFound } from 'next/navigation'
-import { useMDXComponent } from 'next-contentlayer/hooks'
-import mdxComponents from '@/lib/mdx'
-import styles from './Page.module.css'
 import { getPostById } from '@/modules/post/api'
 import { Metadata } from 'next'
+import { useMDXComponent } from 'next-contentlayer/hooks'
+import mdxComponents from '@/lib/mdx/MdxComponents'
+import { Divider, Flex, Text } from '@chakra-ui/react'
 
 interface Props {
   params: { id: number }
@@ -12,21 +12,39 @@ interface Props {
 
 const Page = ({ params }: Props) => {
   const post = getPostById(params.id)
+
   if (!post) notFound()
 
-  const MdxContent = useMDXComponent(post.body.code)
+  const MarkDown = useMDXComponent(post.body.code)
 
   return (
-    <main className={styles.container}>
-      <header className={styles.intro}>
-        <div className={styles.title}>{post.title}</div>
-        <div className={styles.description}>{post.description}</div>
-        <div className={styles.date}>{post.date.substring(0, 10)}</div>
-      </header>
-      <section className={styles.content}>
-        <MdxContent components={mdxComponents(post.id)} />
-      </section>
-    </main>
+    <Flex flexDirection="column">
+      <Flex flexDirection="column" gap="0.2rem">
+        <Text
+          fontSize={{
+            base: '1.4rem',
+            sm: '1.6rem'
+          }}
+          fontWeight={800}>
+          {post.title}
+        </Text>
+        <Text
+          marginBottom="0.2rem"
+          fontSize={{
+            base: '0.9rem',
+            sm: '1rem'
+          }}
+          color="grayAlpha.800"
+          wordBreak="keep-all">
+          {post.description}
+        </Text>
+        <Text fontSize="0.8rem" color="grayAlpha.600" fontWeight={300}>
+          {post.date.substring(0, 10)}
+        </Text>
+      </Flex>
+      <Divider marginY="1.8rem" />
+      <MarkDown components={mdxComponents(post.id)} />
+    </Flex>
   )
 }
 
