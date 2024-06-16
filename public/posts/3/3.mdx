@@ -6,7 +6,7 @@ tags: [Kotlin, Spring]
 ---
 이번 글은 Spring REST Docs와 Swagger를 통한 API 문서화에 대한 글입니다.
 
-<br /><br />
+<br />
 
 협업을 하면서 빠질 수 없는 요소 중 하나는 문서화입니다.
 그 중 API 문서화는 개발자 간의 소통을 원활하게 하고, API의 변경 사항을 쉽게 전달할 수 있도록 하는데요.
@@ -17,7 +17,7 @@ tags: [Kotlin, Spring]
 일반적으로 Spring 생태계에서는 문서화 도구로 Swagger와 Spring REST Docs라는 선택지가 있습니다.
 그 중 Spring REST Docs는 컨트롤러 계층의 테스트를 기반으로 API 명세서를 생성해주는 도구입니다.
 
-<br /><br />
+<br />
 
 저는 코드 커버리지까지 적용해 테스트 코드를 작성하고 있었던 상황이라 Spring REST Docs를 적용해왔습니다.
 Spring REST Docs를 적용하기 용이한 테스트 환경을 구성하기 위해 다음과 같은 과정들을 거쳤습니다.
@@ -118,7 +118,7 @@ Swagger는 Spring REST Docs처럼 API 문서화를 위한 도구 중 하나입�
 
 Swagger는 Spring REST Docs와는 다르게 전용 UI를 제공하며, API 테스트 기능까지 가지고 있습니다.
 
-<br /><br />
+<br />
 
 이럼에도 앞서 문서화 도구로 Swagger를 사용하지 않았던 이유는 Swagger가 테스트 코드에만 영향을 주는 Spring REST Docs와 달리 프로덕션 코드에도 영향을 주기 때문입니다.
 Swagger는 프로덕션 코드에 작성된 어노테이션들을 기반으로 API 명세서를 생성하는데요.
@@ -225,7 +225,7 @@ paths:
 
 이제 API 명세서를 생성하는 것까지 자동화가 되었습니다.
 
-<br /><br />
+<br />
 
 하지만 프론트엔드 팀원이 API 명세서를 보기 위해서는 로컬에서 테스트 코드를 돌리고 Swagger를 따로 구해야 한다는 불편함이 있었습니다.
 이러한 불편함을 없애기 위해 Kubernetes 클러스터에 프론트엔드 팀원이 접속할 수 있는 Swagger를 구동시켰습니다.

@@ -6,7 +6,7 @@ tags: [Kubernetes, DevOps]
 ---
 이번 글은 GitOps 기반 Jenkins CI 파이프라인 구축에 대한 글입니다.
 
-<br /><br />
+<br />
 
 이번에 Kubernetes를 다루면서 코드형 인프라(Infrastructure as Code, IaC)의 장점을 더 살리기 위해 GitOps를 채택했는데요.
 GitOps는 DevOps의 확장 개념으로, 배포와 운영에 관련된 코드들을 Git에서 관리하는 것을 의미합니다.
@@ -431,7 +431,7 @@ stage('Edit manifests') {
 마지막 스테이지는 차트 레포지토리의 이미지 태그를 수정하는 스테이지입니다.
 이 스테이지가 GitOps에서만 볼 수 있는 특별한 스테이지라 생각합니다.
 
-<br /><br />
+<br />
 
 이렇게 구성한 전체 파이프라인은 다음과 같습니다.
 

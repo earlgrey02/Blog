@@ -29,7 +29,7 @@ Kubernetes 자격증들은 모두 Google, Intel, VMWare 등의 기업들이 속�
 또한 Kubernetes 공식 문서를 보면서 시험을 진행할 수 있습니다.
 `kubectl`의 명령형 접근법으로는 만들기 힘든 PersistentVolume, StorageClass 등의 오브젝트들을 공식 문서에서 복사한 YAML 형식의 매니페스트를 통해 쉽게 만들 수 있습니다.
 
-<br /><br />
+<br />
 
 특별한 점은 시험이 비대면으로 진행되며 모두 다 영어라는 점입니다.
 그래서 감독관의 말이나 문제 지문을 해석할 수 있을 정도의 영어는 가능해야 합니다.
@@ -52,13 +52,13 @@ Kubernetes 자격증들은 모두 Google, Intel, VMWare 등의 기업들이 속�
 보통 ClusterRole과 ClusterRoleBinding만 생각해서 이런 문제는 생각을 아예 못했었습니다.
 다행히 문제를 다 풀고 검토 과정에서 뒤늦게 문제를 다시 읽고 수정했었습니다.
 
-<br /><br />
+<br />
 
 두 번째는 거의 무조건 나온다고 생각했던 `etcdctl`을 통한 클러스터 백업 및 복구 문제였습니다.
 백업까진 문제가 없었는데 클러스터를 복구하려고 `etcdctl snapshot restore`를 진행한 후에 자꾸 ETCD가 Pending 상태로 죽어버리는 문제를 겪었습니다.
 그래서 복구는 포기했었습니다.
 
-<br /><br />
+<br />
 
 마지막으로는 `NotReady` 상태의 죽은 Node를 복원하는 문제였습니다.
 해당 Node에서 Kubelet이 죽은 상태길래 설정 파일 문제로 생각해 설정 파일을 찾고 있었습니다.

@@ -6,7 +6,7 @@ tags: [TypeScript, React, React Native]
 ---
 이번 글은 React Native에서 React Query를 통해 구현한 무한 스크롤에 대한 글입니다.
 
-<br /><br />
+<br />
 
 이번에 프론트엔드를 개발하면서 많은 양의 데이터를 다루는 상황이 생겼었습니다.
 해당 데이터들을 한번에 다 불러와 렌더링하는 방법은 성능 측면에서 좋지 않은 방법이라 생각했고, 저는 무한 스크롤을 사용하기로 결정했습니다.
@@ -43,7 +43,7 @@ interface VirtualizedListWithoutRenderItemProps<ItemT> extends ScrollViewProps {
 그리고 `onEndReachedThreshold`는 어느 정도 끝에 도달해야 `onEndReached`를 호출할 지 정해주는 프로퍼티입니다.
 예를 들어 `onEndReachedThreshold`가 0.5이라면 리스트의 끝으로부터 절반에 도달하면 `onEndReached`를 호출합니다.
 
-<br /><br />
+<br />
 
 이를 이용해서 다음과 같이 무한 스크롤을 구현할 수 있습니다.
 
@@ -75,7 +75,7 @@ const LectureScreen = () => {
 그렇게 되면 `FlatList`가 리렌더링되어 새로 변경된 `lectures`가 리스트에 반영됩니다.
 이때, `ListFooterComponent`를 통해 데이터를 가져오는 중이라면 리스트의 하단에 로딩 스피너를 보여주도록 구현했습니다.
 
-<br /><br />
+<br />
 
 위 방식으로 무한 스크롤을 구현하게 되면 수동으로 페이지 인덱스나 `lectures`나 `index` 등의 상태 변수들을 관리해야 합니다.
 이렇게 페칭(Fetching)이 반복적으로 발생하는 상황에서 유용하게 사용할 수 있는 것으로 React Query가 있습니다.
@@ -131,7 +131,7 @@ const { data: infiniteLectures, fetchNextPage, hasNextPage, isFetching } = useIn
 마지막으로 주어지는 인자 내의 메서드인 `getNextPageParam()`은 다음 페이지 번호를 결정하는 함수입니다.
 `lastPage`는 제일 최근에 가져온 페이지의 데이터들이며 `allPages`는 지금까지의 모든 페이지들입니다.
 
-<br /><br />
+<br />
 
 구체적인 작동 원리는 다음과 같습니다.
 API에서 페이지네이션으로 제공하는 데이터의 페이지가 0부터 n까지라고 했을 때, `pageParam`이 0일때 데이터가 페칭되고 나서 `getNextPageParam()`가 호출되면 `allPages.length`를 반환합니다.

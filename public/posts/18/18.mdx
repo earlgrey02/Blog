@@ -6,7 +6,7 @@ tags: [MongoDB]
 ---
 이번 글은 MongoDB에서의 부하 분산에 대한 글입니다.
 
-<br /><br />
+<br />
 
 이번에 MongoDB에서 Replica Set을 설정해서 사용하다가 이상한 현상을 발견했습니다.
 해당 문제는 고가용성을 위해 구성한 Replica Set에서 읽기 작업이 하나의 노드에만 몰리는 현상이었습니다.
@@ -80,7 +80,7 @@ fun mongoTransactionManager(reactiveMongoDatabaseFactory: ReactiveMongoDatabaseF
 이때, Primary 노드에 쓰기 작업이 완료되고 복제본이 Secondary 노드에 생성되기 전에 Secondary 노드에 조회 쿼리를 요청하면 이전의 데이터를 조회하게 된다는 문제가 있습니다.
 이는 Write Concern을 사용하면 해결할 수 있습니다
 
-<br /><br />
+<br />
 
 Write Concern은 쓰기 작업의 완료 처리 시점을 설정할 수 있는 옵션입니다.
 

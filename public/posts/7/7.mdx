@@ -6,7 +6,7 @@ tags: [Kubernetes]
 ---
 이번 글은 Kubernetes에서 Pod 간 네트워크 통신이 안되는 문제에 대한 글입니다.
 
-<br /><br />
+<br />
 
 이번에 Kubernetes에서 Jenkins를 구축하면서 이상한 문제를 겪었습니다.
 그 문제는 Jenkins의 Init 컨테이너 내에서 Jenkins의 업데이트 센터인 `updates.jenkins.io`에 대해 `UnknownHostException`이 지속적으로 발생하는 문제였습니다.
@@ -72,7 +72,7 @@ command terminated with exit code 1
 
 신기하게도 `nslookup`이 절반은 성공하고 나머지 절반은 실패했습니다.
 
-<br /><br />
+<br />
 
 이번엔 CoreDNS의 각 Pod에 대해서 DNS 질의를 시도해보기로 했습니다.
 
@@ -142,7 +142,7 @@ kube-flannel-ds-b6l6f   1/1     Running   0          8d
 
 Flannel은 VXLAN를 사용하여 패킷을 캡슐화해 서로 다른 Node에 있는 Pod 간 통신이 되도록 해주는 CNI 플러그인입니다.
 
-<br /><br />
+<br />
 
 이때까지 몰랐던 점은 Flannel이 사용하는 특별한 포트 번호가 있다는 것이었는데요.
 Flannel은 UDP 프로토콜에서 8285, 8472 포트를 사용합니다.

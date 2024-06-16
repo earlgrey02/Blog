@@ -6,7 +6,7 @@ tags: [Kotlin, Spring, Spring WebFlux]
 ---
 이번 글은 Spring WebFlux에서 자체적으로 구현한 로깅(Logging) 및 로그 추적에 대한 글입니다.
 
-<br /><br />
+<br />
 
 로그는 시스템에 있어서 중요한 역할을 가지고 있습니다.
 로그들을 수집해서 문제를 해결하거나 사용자의 행동을 분석하는 등의 많은 작업을 수행할 수 있습니다.
@@ -115,7 +115,7 @@ fun around(joinPoint: ProceedingJoinPoint): Mono<*> =
 우선 `joinPoint.args.first()`를 통해 인자로 주어진 `ServerRequest`를 가져와서 요청에 대한 로깅을 수행합니다.
 그 다음, `joinPoint.proceed(arrayOf(it))`에서 반환된 `Mono<ServerResponse>`를 통해 응답에 대한 로깅을 수행하도록 했습니다.
 
-<br /><br />
+<br />
 
 최종적인 애스펙트는 다음과 같습니다.
 
@@ -152,7 +152,7 @@ class LoggingAspect {
 
 문제의 원인은 어드바이스(Advice)에서 Request Body를 가져오는 과정에 있었습니다.
 
-```java title="ServerRequest.java" showLineNumbers /Mono<T>/
+```java title="ServerRequest.java" showLineNumbers
 public interface ServerRequest {
     <T> Mono<T> bodyToMono(Class<? extends T> elementClass);
 }
@@ -233,7 +233,7 @@ class DefaultServerRequestBuilder implements ServerRequest.Builder {
 `ServerRequest.Builder`의 구현체인 `DefaultServerRequestBuilder`에는 Request Body를 새로 생성하는 `body()`가 있습니다.
 `body()`는 `String` 타입의 JSON 문자열을 통해 새로운 Request Body를 설정합니다.
 
-<br /><br />
+<br />
 
 그렇게 수정한 코드는 다음과 같습니다.
 
@@ -328,7 +328,7 @@ class GlobalExceptionHandler(
 예외 처리는 `ErrorWebExceptionHandler`의 구현체인 `GlobalExceptionHandler`를 통해 수행됩니다.
 그래서 `200 OK`의 상태 코드를 가진 `ServerResponse`는 예외가 발생하면 `GlobalExceptionHandler`에 의해 해당 예외에 맞는 상태 코드와 Response Body를 가진 응답으로 변환됩니다.
 
-<br /><br />
+<br />
 
 문제는 이 예외 처리는 핸들러 계층 외부이므로 핸들러에 적용한 애스펙트가 적용되지 않는다는 점입니다.
 그래서 로깅은 핸들러가 반환하는 `200 OK`의 상태 코드를 가진 `ServerResponse`에 대해서만 수행됩니다.
@@ -436,7 +436,7 @@ fun Flux<DataBuffer>.toByteArray(): Mono<ByteArray> =
 이렇게 되면 `Mono.empty()`로 인해 다운 스트림이 전부 실행되지 않게 됩니다.
 그래서 `LoggingFilter`에서는 `defaultIfEmpty()`를 사용해 크기가 0인 `ByteArray`를 기본 값으로 설정해주었습니다.
 
-<br /><br />
+<br />
 
 또한 버퍼(Buffer)의 경우, 사용한 후에 `release()`를 호출하지 않으면 해당 버퍼는 남은 레퍼런스 카운트(Reference Count)에 의해 가비지 컬렉션(Garbage Collection)의 대상이 되지 않는데요.
 이는 메모리 누수로 이어질 수 있으므로 반드시 `release()`를 통해 버퍼를 해제해야 합니다.

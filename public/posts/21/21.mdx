@@ -6,7 +6,7 @@ tags: [Kotlin, Spring, Spring WebFlux, AWS]
 ---
 이번 글은 Spring WebFlux에서 AWS S3(Simple Storage Service)를 통해 정적 파일을 업로드하고 AWS CloudFront로 CDN(Content Delivery Network)을 적용하는 과정에 대한 글입니다.
 
-<br /><br />
+<br />
 
 이번에 서비스를 개발하면서 게시글에 이미지를 업로드하는 기능을 구현하게 되었습니다.
 일반적으로 이미지 등의 파일은 일반적인 문자열 등의 데이터와 달리 용량이 커서 데이터베이스가 아닌 외부 저장소에 저장되는데요.
@@ -137,7 +137,7 @@ Spring WebFlux에서는 `CompletableFuture`를 `fromFuture()`를 통해 `Mono`�
 
 이제 이미지를 업로드하는 로직을 구현해 보겠습니다.
 
-<br /><br />
+<br />
 
 구현하기에 앞서, 저는 이미지를 `multipart/form-data`를 통해 받을 예정인데요.
 Spring WebFlux에서는 `multipart/form-data`로 받은 Request Body는 `MultiValueMap<String, Part>`의 타입을 가지고 있습니다.
@@ -169,7 +169,7 @@ public interface FilePart extends Part {
 
 여기서 `Part`는 받은 데이터의 종류에 따라 `FilePart` 또는 `FormFieldPart`로 구현됩니다.
 
-<br /><br />
+<br />
 
 문제는 `AsyncS3Client`가 `content()`의 반환 값인 `Flux<DataBuffer>`에 대한 지원을 하지 않는다는 점입니다.
 그러므로 `Flux<DataBuffer>`를 `AsyncS3Client`가 받을 수 있는 `ByteArray` 또는 `String` 등으로 변환해야 합니다.
@@ -345,7 +345,7 @@ API 연동 로직은 위와 같이 구현했습니다.
     'https://<Bucket name>.s3.ap-northeast-2.amazonaws.com/5A397677-898D-4BCA-AEB3-39A3F18588CB.jpg'
   ],
   createdDate: ISODate('2024-06-01T10:47:10.912Z'),
-  _class: 'com.doyoumate.domain.board.model.Post'
+  _class: 'com.doyoumate.domain.board.model.PostItem'
 }
 ```
 
@@ -364,7 +364,7 @@ API 연동 로직은 위와 같이 구현했습니다.
 제가 구현한 이미지 업로드는 URI에 버킷의 정보가 노출된다는 단점이 존재하는데요.
 해당 단점은 CDN을 적용해서 해결할 수 있습니다.
 
-<br /><br />
+<br />
 
 CDN이란 사용자의 위치와 인접한 곳에서 정적 파일를 캐싱(Caching)해 제공하는 방식인데요.
 일반적으로 정적 파일이 저장된 리전과 다른 리전에서도 정적 파일을 빠르게 로드하기 위해 사용하지만, AWS S3에 CDN을 적용하면 URI로부터 버킷 정보를 숨기고 비용을 절감할 수 있다는 장점도 있습니다.
@@ -440,7 +440,7 @@ private fun createUri(key: String) = "https://${domain}/${key}"
     'https://d39rop1r97qhnh.cloudfront.net/14C9675D-CABF-477D-B804-0478F8E1D5DF.jpg'
   ],
   createdDate: ISODate('2024-06-02T08:09:57.586Z'),
-  _class: 'com.doyoumate.domain.board.model.Post'
+  _class: 'com.doyoumate.domain.board.model.PostItem'
 }
 ```
 

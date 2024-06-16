@@ -6,7 +6,7 @@ tags: [TypeScript, React]
 ---
 이번 글은 디바운싱(Debouncing)을 통한 API 호출 최적화에 대한 글입니다.
 
-<br /><br />
+<br />
 
 제가 개발하는 서비스에서는 다른 서비스들처럼 게시글에 좋아요를 할 수 있는 기능이 있는데요.
 
@@ -179,7 +179,7 @@ const useLike = (post: PostResponse): LikeStates => {
 좋아요를 클릭하면 `likeHandler`에 의해 `isLiked`의 상태가 바뀌는데요.
 이때, 호출되는 `useDebouncing()`에서 디바운싱을 통해 좋아요를 여러 번 클릭해도 마지막 좋아요 요청만 실제로 처리하게 됩니다.
 
-<br /><br />
+<br />
 
 최종적으로는 `useDebouncing()`에서 `isLiked`가 `initialIsLiked`와 다르다면 바뀐 좋아요 여부를 서버에 반영하고 Redux 스토어 내의 `likedStudentIds`를 갱신하게 됩니다.
 
