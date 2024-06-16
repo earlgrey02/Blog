@@ -1,25 +1,33 @@
-import './global.css'
-import styles from './Layout.module.css'
 import { ReactNode } from 'react'
-import { Analytics } from '@vercel/analytics/react'
 import { Metadata } from 'next'
 import Head from './head'
-import Header from '@/component/Header/Header'
-import Footer from '@/component/Footer/Footer'
-import ReduxProvider from '@/lib/redux'
+import Header from '@/component/Header'
+import ChakraProvider from '@/lib/chakra/ChakraProvider'
+import { Box, ColorModeScript } from '@chakra-ui/react'
+import config from '@/lib/chakra/config'
+import VercelProvider from '@/lib/vercel/VercelProvider'
+import ReduxProvider from '@/redux/ReduxProvider'
 
 interface Props {
   children: ReactNode
 }
 
 const metadata: Metadata = {
-  title: 'earlgrey02의 블로그',
-  description: 'earlgrey02의 기술 블로그입니다.',
+  metadataBase: new URL('https://earlgrey02.com'),
+  title: {
+    template: '%s | earlgrey02.com',
+    default: 'earlgrey02.com'
+  },
+  description: 'earlgrey02의 개발 블로그입니다.',
   openGraph: {
-    title: 'earlgrey02의 기술 블로그',
-    description: 'earlgrey02의 기술 블로그입니다.',
+    title: {
+      template: '%s | earlgrey02.com',
+      default: 'earlgrey02.com'
+    },
+    description: 'earlgrey02의 개발 블로그입니다.',
     url: 'https://earlgrey02.com',
-    type: 'website'
+    type: 'website',
+    locale: 'ko'
   }
 }
 
@@ -28,12 +36,22 @@ const Layout = ({ children }: Props) => {
     <html>
       <Head />
       <body>
-        <div className={styles.container}>
-          <Header />
-          <ReduxProvider>{children}</ReduxProvider>
-          <Footer />
-        </div>
-        <Analytics />
+        <VercelProvider>
+          <ReduxProvider>
+            <ChakraProvider>
+              <ColorModeScript initialColorMode={config.initialColorMode} />
+              <Box
+                position="relative"
+                maxWidth="50rem"
+                minHeight="100vh"
+                margin="0 auto"
+                padding="2.5rem 1.4rem">
+                <Header />
+                {children}
+              </Box>
+            </ChakraProvider>
+          </ReduxProvider>
+        </VercelProvider>
       </body>
     </html>
   )
