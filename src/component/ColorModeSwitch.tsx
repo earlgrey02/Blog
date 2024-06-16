@@ -1,18 +1,18 @@
 'use client'
 import { MoonIcon, SunIcon } from '@/lib/chakra/icons'
-import { Link, useColorMode } from '@chakra-ui/react'
+import { Button, useColorMode } from '@chakra-ui/react'
 
 const ColorModeSwitch = () => {
   const { colorMode, toggleColorMode } = useColorMode()
 
   return (
-    <Link onClick={toggleColorMode}>
+    <Button padding={0} onClick={toggleColorMode}>
       {colorMode === 'light' ? (
-        <MoonIcon boxSize={{ base: '1.8rem', sm: '2rem' }} />
+        <MoonIcon boxSize={{ base: '1.6rem', sm: '1.8rem' }} />
       ) : (
-        <SunIcon boxSize={{ base: '1.8rem', sm: '2rem' }} />
+        <SunIcon boxSize={{ base: '1.6rem', sm: '1.8rem' }} />
       )}
-    </Link>
+    </Button>
   )
 }
 
