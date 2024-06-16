@@ -40,7 +40,7 @@ const PostItem = ({ post }: Props) => {
       </Text>
       <Flex gap="0.3rem" marginBottom="0.4rem">
         {post.tags.map(tag => (
-          <TagItem tag={tag} />
+          <TagItem tag={tag} key={tag} />
         ))}
       </Flex>
       <Text

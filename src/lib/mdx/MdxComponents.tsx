@@ -1,7 +1,7 @@
 import type { MDXComponents } from 'mdx/types'
-import NextLink from 'next/link'
+import Link from 'next/link'
 import Image from './Image'
-import { Link, Text } from '@chakra-ui/react'
+import { Text } from '@chakra-ui/react'
 
 const mdxComponents = (id: number): MDXComponents => ({
   p: ({ children }) => (
@@ -12,9 +12,9 @@ const mdxComponents = (id: number): MDXComponents => ({
         sm: '0.9rem'
       }}
       lineHeight={2}
-      wordBreak="break-word"
-      children={children}
-    />
+      wordBreak="break-word">
+      {children}
+    </Text>
   ),
   h1: ({ children }) => (
     <Text
@@ -22,9 +22,9 @@ const mdxComponents = (id: number): MDXComponents => ({
       marginTop="1.2rem"
       marginBottom="0.4rem"
       fontSize="1.3rem"
-      fontWeight={600}
-      children={children}
-    />
+      fontWeight={600}>
+      {children}
+    </Text>
   ),
   h2: ({ children }) => (
     <Text
@@ -32,13 +32,11 @@ const mdxComponents = (id: number): MDXComponents => ({
       marginTop="1.2rem"
       marginBottom="0.4rem"
       fontSize="1.1rem"
-      fontWeight={600}
-      children={children}
-    />
+      fontWeight={600}>
+      {children}
+    </Text>
   ),
-  a: ({ href, children }) => (
-    <Link as={NextLink} href={href as string} children={children} />
-  ),
+  a: ({ href, children }) => <Link href={href as string}>{children}</Link>,
   img: ({ src, alt }) => (
     <Image src={`/posts/${id}/${src}`} alt={alt as string} />
   )

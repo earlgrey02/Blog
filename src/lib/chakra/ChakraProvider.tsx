@@ -8,7 +8,7 @@ interface Props {
 }
 
 const ChakraProvider = ({ children }: Props) => {
-  return <ChakraOriginProvider children={children} theme={theme} />
+  return <ChakraOriginProvider theme={theme}>{children}</ChakraOriginProvider>
 }
 
 export default ChakraProvider
