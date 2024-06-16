@@ -7,8 +7,4 @@ const store = configureStore({
   }
 })
 
-declare global {
-  type Store = ReturnType<typeof store.getState>
-}
-
 export default store
