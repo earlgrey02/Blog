@@ -1,5 +1,13 @@
 'use client'
-import { Divider, Flex, Link, List, ListItem, Text } from '@chakra-ui/react'
+import {
+  Button,
+  Divider,
+  Flex,
+  Link,
+  List,
+  ListItem,
+  Text
+} from '@chakra-ui/react'
 import Motion from '@/lib/motion/Motion'
 import Image from 'next/image'
 import { GitHubIcon } from '@/lib/chakra/icons'
@@ -78,8 +86,9 @@ const Page = () => {
               </Text>
             </Flex>
             <Flex>
-              <Link
+              <Button
                 as={NextLink}
+                padding={0}
                 href="https://github.com/earlgrey02"
                 target="_blank">
                 <GitHubIcon
@@ -88,7 +97,7 @@ const Page = () => {
                     sm: '1.9rem'
                   }}
                 />
-              </Link>
+              </Button>
             </Flex>
           </Flex>
         </Flex>
