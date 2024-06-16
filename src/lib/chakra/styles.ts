@@ -8,8 +8,10 @@ const codeStyle: SystemStyleFunction = props => ({
       paddingX: '0.4rem',
       paddingY: '0.2rem',
       borderRadius: '0.2rem',
+      color: 'grayAlpha.800',
       backgroundColor: 'grayAlpha.200',
-      fontSize: '0.75rem'
+      fontSize: '0.75rem',
+      fontWeight: 300
     }
   },
   code: {
@@ -35,11 +37,12 @@ const codeStyle: SystemStyleFunction = props => ({
     '& > pre': {
       marginTop: '1rem',
       marginBottom: '0.6rem',
-      padding: '0.8rem',
+      padding: '1rem',
       borderRadius: '0.4rem'
     },
     '& > pre > code': {
       fontSize: { base: '0.7rem', sm: '0.8rem' },
+      fontWeight: 500,
       lineHeight: 1.5,
       overflowX: 'scroll'
     }
