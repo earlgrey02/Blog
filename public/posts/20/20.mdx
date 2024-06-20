@@ -91,7 +91,7 @@ class ExampleWebSocketHandler: WebSocketHandler {
 간단하게 웹 소켓을 통해 메시지를 주고 받는 예시를 작성해 보았는데요.
 해당 예시는 인바운드 메시지를 받아 가공한 후 바로 아웃바운드 메시지로 전송하는 예시입니다.
 
-```kotlin title="ExampleWebSockerHandler.kt" showLineNumbers /Mono.zip/
+```kotlin title="ExampleWebSockerHandler.kt" showLineNumbers
 override fun handle(session: WebSocketSession): Mono<Void> =
     Mono.zip(
         session.receive()

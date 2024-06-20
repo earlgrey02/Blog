@@ -234,7 +234,7 @@ result.expectSubscription()
 Spring WebFlux에서는 서비스 계층에서 일반적으로 `Mono` 또는 `Flux` 같은 `Publisher`를 반환하므로 구독을 통해 검증을 해야 합니다.
 그러므로 Mockk가 아닌 Reactor의 `StepVerifier`를 사용하기로 했습니다.
 
-```kotlin showLineNumbers /awaitSingle()/
+```kotlin showLineNumbers {2}
 When("유저가 특정 퀴즈를 조회하면") {
     val result = quizService.getQuizById(ID).awaitSingle()
 
@@ -244,7 +244,7 @@ When("유저가 특정 퀴즈를 조회하면") {
 }
 ```
 
-만약 Spring WebFlux에서 Mockk를 통해 검증을 하고 싶다면 `awaitSingle()` 등의 Coroutine 확장 함수들을 통해 실제로 반환하는 값을 가져와야 합니다.
+만약 Spring WebFlux에서 Mockk를 통해 검증을 하고 싶다면 `block()` 또는 `awaitSingle()` 등의 코루틴(Coroutine) 확장 함수들을 통해 실제로 반환하는 값을 가져와야 합니다.
 
 ```kotlin title="BehaviorSpecGivenContainerScope.kt" showLineNumbers
 @Suppress("FunctionName")
@@ -258,4 +258,4 @@ class BehaviorSpecGivenContainerScope(
 }
 ```
 
-참고로 Kotest는 Coroutine 기반으로 작동하므로 추가적인 Couroutine 빌더 없이 Coroutine 확장 함수를 사용할 수 있습니다.
+참고로 Kotest는 코루틴 기반으로 작동하므로 추가적인 Couroutine 빌더 없이 코루틴 확장 함수를 사용할 수 있습니다.
