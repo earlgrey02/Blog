@@ -1,5 +1,5 @@
 import { Icon, IconProps } from '@chakra-ui/icon'
-import { ChevronLeftIcon } from '@chakra-ui/icons'
+import { ChevronLeftIcon as ArrowIcon } from '@chakra-ui/icons'
 
 const HomeIcon = (props: IconProps) => (
   <Icon viewBox="0 0 24 24" {...props}>
@@ -47,7 +47,5 @@ const GitHubIcon = (props: IconProps) => (
     />
   </Icon>
 )
-
-const ArrowIcon = ChevronLeftIcon
 
 export { HomeIcon, SunIcon, MoonIcon, GitHubIcon, ArrowIcon }
