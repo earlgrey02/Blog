@@ -21,11 +21,21 @@ const Header = () => {
         }}>
         {path.includes('/post/') ? (
           <Button as={Link} href="/post" padding={0}>
-            <ArrowIcon boxSize={{ base: '2.2rem', sm: '2.4rem' }} />
+            <ArrowIcon
+              boxSize={{
+                base: '2.2rem',
+                sm: '2.4rem'
+              }}
+            />
           </Button>
         ) : (
           <Button as={Link} href="/" padding={0}>
-            <HomeIcon boxSize={{ base: '1.8rem', sm: '2rem' }} />
+            <HomeIcon
+              boxSize={{
+                base: '1.8rem',
+                sm: '2rem'
+              }}
+            />
           </Button>
         )}
       </Flex>

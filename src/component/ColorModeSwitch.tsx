@@ -8,9 +8,19 @@ const ColorModeSwitch = () => {
   return (
     <Button padding={0} onClick={toggleColorMode}>
       {colorMode === 'light' ? (
-        <MoonIcon boxSize={{ base: '1.6rem', sm: '1.8rem' }} />
+        <MoonIcon
+          boxSize={{
+            base: '1.6rem',
+            sm: '1.8rem'
+          }}
+        />
       ) : (
-        <SunIcon boxSize={{ base: '1.6rem', sm: '1.8rem' }} />
+        <SunIcon
+          boxSize={{
+            base: '1.6rem',
+            sm: '1.8rem'
+          }}
+        />
       )}
     </Button>
   )
