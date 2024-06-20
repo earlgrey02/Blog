@@ -207,7 +207,7 @@ class RefreshTokenRepository(
 Spring WebFlux에서는 `ReactiveRedisTemplate`을 사용해서 비동기적으로 Redis를 다룰 수 있습니다.
 또한 저장 시에는 프로퍼티로 설정한 유효 시간 동안만 Redis에 저장되도록 했습니다.
 
-```kotlin title="AuthenticationHandler.kt" showLineNumbers {6, 10-14}
+```kotlin title="AuthenticationHandler.kt" showLineNumbers {6, 10}
 fun refresh(request: RefreshRequest): Mono<RefreshResponse> =
     with(request) {
         Mono.fromCallable { jwtProvider.getAuthentication(refreshToken) }
@@ -224,7 +224,7 @@ fun refresh(request: RefreshRequest): Mono<RefreshResponse> =
 
 이제 `RefreshTokenRepository`를 사용해 리프레쉬 토큰을 확인하고 토큰을 재발급하면 됩니다.
 
-```kotlin title="AuthenticationHandler.kt" showLineNumbers {15-21, 26}
+```kotlin title="AuthenticationHandler.kt" showLineNumbers {16-20, 26}
 fun login(request: LoginRequest): Mono<LoginResponse> =
     with(request) {
         studentRepository.findByNumber(request.studentNumber)
@@ -324,7 +324,7 @@ API 요청 시, 상태 코드가 `401 Unauthorized`인 경우에 Async Storage�
 토큰 재발급 시, 리프레쉬 토큰이 Redis에 존재하지 않거나 만료된 경우는 일반적인 경우이므로 문제가 되지 않습니다.
 하지만 리프레쉬 토큰이 Redis에 존재하는데 요청으로 주어진 토큰과 내용이 일치하지 않는 경우는 탈취 시도로 볼 수 있습니다.
 
-```kotlin title="AuthenticationHandler.kt" showLineNumbers {9-12}
+```kotlin title="AuthenticationHandler.kt" showLineNumbers {10-11}
 fun refresh(request: RefreshRequest): Mono<RefreshResponse> =
     with(request) {
         Mono.fromCallable { jwtProvider.getAuthentication(refreshToken) }
@@ -356,7 +356,7 @@ fun refresh(request: RefreshRequest): Mono<RefreshResponse> =
 이는 리프레쉬 토큰을 토큰 재발급 시에 액세스 토큰과 함께 재발급하는 방법으로 간단하게 탈취 가능성을 줄일 수 있습니다.
 당연히 이전에 사용하던 리프레쉬 토큰은 삭제해야 합니다.
 
-```kotlin title="AuthenticationHandler.kt" showLineNumbers {13-20, 24}
+```kotlin title="AuthenticationHandler.kt" showLineNumbers {14-19, 24}
 fun refresh(request: RefreshRequest): Mono<RefreshResponse> =
     with(request) {
         Mono.fromCallable { jwtProvider.getAuthentication(refreshToken) }

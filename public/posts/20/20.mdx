@@ -130,7 +130,7 @@ class WebSocketConfiguration {
 앞서, 인가는 Spring Security를 통해 처리되므로 `ReactiveSecurityContextHolder`로부터 가져온 `Authentication`을 사용자 식별에 사용하겠습니다.
 제가 따로 구현한 `DefaultJwtAuthentication`은 데이터베이스 내에 저장된 사용자의 식별자를 가지고 있습니다.
 
-```kotlin title="MessageWebSocketHandler.kt" showLineNumbers {12, 15, 20-26, 29-33}
+```kotlin title="MessageWebSocketHandler.kt" showLineNumbers {12, 15, 21-27, 30-34}
 @Component
 class MessageWebSocketHandler(
     private val messageRepository: MessageRepository,
