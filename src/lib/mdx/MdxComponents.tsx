@@ -37,7 +37,12 @@ const mdxComponents = (id: number): MDXComponents => ({
     </Text>
   ),
   a: ({ href, children }) => (
-    <Link as={NextLink} href={href as string} color="teal.500" fontWeight={600}>
+    <Link
+      as={NextLink}
+      href={href as string}
+      target="_blank"
+      color="teal.500"
+      fontWeight={600}>
       {children}
     </Link>
   ),
