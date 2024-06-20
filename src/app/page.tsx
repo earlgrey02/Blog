@@ -88,6 +88,7 @@ const Page = () => {
             <Flex>
               <Button
                 as={NextLink}
+                marginLeft={-2}
                 padding={0}
                 href="https://github.com/earlgrey02"
                 target="_blank">
