@@ -3,10 +3,9 @@ import { Button, Flex } from '@chakra-ui/react'
 import { ArrowIcon, HomeIcon } from '@/lib/chakra/icons'
 import ColorModeSwitch from '@/component/ColorModeSwitch'
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 
 const Header = () => {
-  const router = useRouter()
   const path = usePathname()
 
   return (
@@ -21,11 +20,11 @@ const Header = () => {
           sm: '0.8rem'
         }}>
         {path.includes('/post/') ? (
-          <Button padding={0} onClick={router.back}>
+          <Button as={Link} href="/post" padding={0}>
             <ArrowIcon boxSize={{ base: '2.2rem', sm: '2.4rem' }} />
           </Button>
         ) : (
-          <Button padding={0} as={Link} href="/">
+          <Button as={Link} href="/" padding={0}>
             <HomeIcon boxSize={{ base: '1.8rem', sm: '2rem' }} />
           </Button>
         )}
